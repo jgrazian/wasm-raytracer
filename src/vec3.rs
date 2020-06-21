@@ -1,6 +1,8 @@
 use std::fmt;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
+use crate::rand::Rand;
+
 pub type Point3 = Vec3;
 pub type Color = Vec3;
 
@@ -44,10 +46,12 @@ impl Vec3 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
+    #[inline]
     pub fn dot(u: Vec3, v: Vec3) -> f64 {
         u.x * v.x + u.y * v.y + u.z * v.z
     }
 
+    #[inline]
     pub fn cross(u: Vec3, v: Vec3) -> Vec3 {
         Vec3 {
             x: u.y * v.z - u.z * v.y,
@@ -56,12 +60,53 @@ impl Vec3 {
         }
     }
 
+    #[inline]
     pub fn unit_vector(v: Vec3) -> Vec3 {
         let len = v.length();
         Vec3 {
             x: v.x() / len,
             y: v.y() / len,
             z: v.z() / len,
+        }
+    }
+
+    #[inline]
+    pub fn random(rng: &mut Rand) -> Vec3 {
+        Vec3 {
+            x: rng.rand_float(),
+            y: rng.rand_float(),
+            z: rng.rand_float(),
+        }
+    }
+
+    #[inline]
+    pub fn random_range(rng: &mut Rand, min: f64, max: f64) -> Vec3 {
+        Vec3 {
+            x: rng.rand_float_range(min, max),
+            y: rng.rand_float_range(min, max),
+            z: rng.rand_float_range(min, max),
+        }
+    }
+
+    #[inline]
+    pub fn random_in_unit_sphere(rng: &mut Rand) -> Vec3 {
+        loop {
+            let p = Vec3::random_range(rng, -1.0, 1.0);
+            if p.length_squared() < 1.0 {
+                return p;
+            }
+        }
+    }
+
+    #[inline]
+    pub fn random_unit_vector(rng: &mut Rand) -> Vec3 {
+        let a = rng.rand_float_range(0.0, 2.0 * std::f64::consts::PI);
+        let z = rng.rand_float_range(-1.0, 1.0);
+        let r = (1.0 - z * z).sqrt();
+        Vec3 {
+            x: r * a.cos(),
+            y: r * a.sin(),
+            z: z,
         }
     }
 }
@@ -73,6 +118,7 @@ impl fmt::Display for Vec3 {
 }
 
 impl AddAssign for Vec3 {
+    #[inline]
     fn add_assign(&mut self, rhs: Vec3) {
         self.x += rhs.x;
         self.y += rhs.y;
@@ -81,6 +127,7 @@ impl AddAssign for Vec3 {
 }
 
 impl SubAssign for Vec3 {
+    #[inline]
     fn sub_assign(&mut self, rhs: Vec3) {
         self.x -= rhs.x;
         self.y -= rhs.y;
@@ -89,6 +136,7 @@ impl SubAssign for Vec3 {
 }
 
 impl MulAssign for Vec3 {
+    #[inline]
     fn mul_assign(&mut self, rhs: Vec3) {
         self.x *= rhs.x;
         self.y *= rhs.y;
@@ -97,6 +145,7 @@ impl MulAssign for Vec3 {
 }
 
 impl DivAssign for Vec3 {
+    #[inline]
     fn div_assign(&mut self, rhs: Vec3) {
         self.x /= rhs.x;
         self.y /= rhs.y;
@@ -107,6 +156,7 @@ impl DivAssign for Vec3 {
 impl Add for Vec3 {
     type Output = Vec3;
 
+    #[inline]
     fn add(self, rhs: Vec3) -> Vec3 {
         return Vec3 {
             x: self.x + rhs.x,
@@ -119,6 +169,7 @@ impl Add for Vec3 {
 impl Sub for Vec3 {
     type Output = Vec3;
 
+    #[inline]
     fn sub(self, rhs: Vec3) -> Vec3 {
         return Vec3 {
             x: self.x - rhs.x,
@@ -131,6 +182,7 @@ impl Sub for Vec3 {
 impl Mul for Vec3 {
     type Output = Vec3;
 
+    #[inline]
     fn mul(self, rhs: Vec3) -> Vec3 {
         return Vec3 {
             x: self.x * rhs.x,
@@ -143,6 +195,7 @@ impl Mul for Vec3 {
 impl Mul<f64> for Vec3 {
     type Output = Vec3;
 
+    #[inline]
     fn mul(self, rhs: f64) -> Vec3 {
         return Vec3 {
             x: self.x * rhs,
@@ -155,6 +208,7 @@ impl Mul<f64> for Vec3 {
 impl Mul<Vec3> for f64 {
     type Output = Vec3;
 
+    #[inline]
     fn mul(self, rhs: Vec3) -> Vec3 {
         return Vec3 {
             x: self * rhs.x,
@@ -167,6 +221,7 @@ impl Mul<Vec3> for f64 {
 impl Div for Vec3 {
     type Output = Vec3;
 
+    #[inline]
     fn div(self, rhs: Vec3) -> Vec3 {
         return Vec3 {
             x: self.x / rhs.x,
@@ -179,6 +234,7 @@ impl Div for Vec3 {
 impl Div<f64> for Vec3 {
     type Output = Vec3;
 
+    #[inline]
     fn div(self, rhs: f64) -> Vec3 {
         return (1.0 / rhs) * self;
     }
@@ -187,6 +243,7 @@ impl Div<f64> for Vec3 {
 impl Neg for Vec3 {
     type Output = Vec3;
 
+    #[inline]
     fn neg(self) -> Vec3 {
         return Vec3 {
             x: -self.x,
