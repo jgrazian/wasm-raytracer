@@ -1,6 +1,7 @@
 mod camera;
 mod hittable;
 mod hittable_list;
+mod material;
 mod rand;
 mod ray;
 mod sphere;
@@ -13,6 +14,7 @@ use std::rc::Rc;
 use camera::Camera;
 use hittable::{HitRecord, Hittable};
 use hittable_list::HittableList;
+use material::*;
 use rand::Rand;
 use ray::Ray;
 use sphere::Sphere;
@@ -53,11 +55,31 @@ pub struct Image {
 #[wasm_bindgen]
 impl Image {
     pub fn new(w: usize, h: usize) -> Image {
-        let sphere_1 = Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5);
-        let sphere_2 = Sphere::new(Point3::new(0.0, -100.5, 1.0), 100.0);
+        let sphere_1 = Hittable::Sphere(Sphere::new(
+            Point3::new(0.0, 0.0, -1.0),
+            0.5,
+            Material::Lambertian(Lambertian::new(Color::new(0.7, 0.3, 0.3))),
+        ));
+        let sphere_2 = Hittable::Sphere(Sphere::new(
+            Point3::new(0.0, -100.5, 1.0),
+            100.0,
+            Material::Lambertian(Lambertian::new(Color::new(0.8, 0.8, 0.0))),
+        ));
+        let sphere_3 = Hittable::Sphere(Sphere::new(
+            Point3::new(1.0, 0.0, -1.0),
+            0.5,
+            Material::Metal(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0)),
+        ));
+        let sphere_4 = Hittable::Sphere(Sphere::new(
+            Point3::new(-1.0, 0.0, -1.0),
+            0.5,
+            Material::Metal(Metal::new(Color::new(0.8, 0.8, 0.8), 0.2)),
+        ));
         let mut world = HittableList::new();
-        world.add(Rc::new(sphere_1));
-        world.add(Rc::new(sphere_2));
+        world.add(sphere_1);
+        world.add(sphere_2);
+        world.add(sphere_3);
+        world.add(sphere_4);
 
         Image {
             width: w,
@@ -70,7 +92,7 @@ impl Image {
     }
 
     pub fn render(&mut self) {
-        const samples_per_pixel: usize = 25;
+        const samples_per_pixel: usize = 50;
         const max_depth: usize = 50;
         for j in (0..self.height).rev() {
             for i in 0..self.width {
@@ -119,17 +141,24 @@ impl Image {
     }
 }
 
-fn ray_color(r: Ray, world: &HittableList, rng: &mut Rand, depth: usize) -> Color {
+fn ray_color(r: Ray, world: &HittableList, mut rng: &mut Rand, depth: usize) -> Color {
     let mut rec: HitRecord = Default::default();
     if depth <= 0 {
         return Color::zero();
     }
 
     if world.hit(r, 0.001, INFINITY, &mut rec) {
-        let target = rec.p + rec.normal + Vec3::random_unit_vector(rng);
-        return 0.5 * ray_color(Ray::new(rec.p, target - rec.p), world, rng, depth - 1);
+        let mut scattered: Ray = Default::default();
+        let mut attenuation: Color = Default::default();
+        let mut rec_copy = rec;
+        if rec
+            .material
+            .scatter(r, &mut rec_copy, &mut attenuation, &mut scattered, &mut rng)
+        {
+            return attenuation * ray_color(scattered, world, rng, depth - 1);
+        }
+        return Color::new(0.0, 0.0, 0.0);
     }
-
     let unit_dir = Vec3::unit_vector(r.direction());
     let t = 0.5 * (unit_dir.y() + 1.0);
     (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)

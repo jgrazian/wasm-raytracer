@@ -109,6 +109,11 @@ impl Vec3 {
             z: z,
         }
     }
+
+    #[inline]
+    pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {
+        v - 2.0 * Vec3::dot(v, n) * n
+    }
 }
 
 impl fmt::Display for Vec3 {
