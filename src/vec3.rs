@@ -111,14 +111,36 @@ impl Vec3 {
     }
 
     #[inline]
+    pub fn random_in_unit_disk(rng: &mut Rand) -> Vec3 {
+        loop {
+            let p = Vec3::new(
+                rng.rand_float_range(-1.0, 1.0),
+                rng.rand_float_range(-1.0, 1.0),
+                0.0,
+            );
+            if p.length_squared() < 1.0 {
+                return p;
+            }
+        }
+    }
+
+    #[inline]
     pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {
         v - 2.0 * Vec3::dot(v, n) * n
+    }
+
+    #[inline]
+    pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f64) -> Vec3 {
+        let cos_theta = Vec3::dot(-uv, n);
+        let r_out_parallel = etai_over_etat * (uv + cos_theta * n);
+        let r_out_perp = -(1.0 - r_out_parallel.length_squared()).sqrt() * n;
+        r_out_parallel + r_out_perp
     }
 }
 
 impl fmt::Display for Vec3 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return write!(f, "{} {} {}", self.x, self.y, self.z);
+        write!(f, "{} {} {}", self.x, self.y, self.z)
     }
 }
 
@@ -163,11 +185,24 @@ impl Add for Vec3 {
 
     #[inline]
     fn add(self, rhs: Vec3) -> Vec3 {
-        return Vec3 {
+        Vec3 {
             x: self.x + rhs.x,
             y: self.y + rhs.y,
             z: self.z + rhs.z,
-        };
+        }
+    }
+}
+
+impl Add<f64> for Vec3 {
+    type Output = Vec3;
+
+    #[inline]
+    fn add(self, rhs: f64) -> Vec3 {
+        Vec3 {
+            x: self.x + rhs,
+            y: self.y + rhs,
+            z: self.z + rhs,
+        }
     }
 }
 
@@ -176,11 +211,11 @@ impl Sub for Vec3 {
 
     #[inline]
     fn sub(self, rhs: Vec3) -> Vec3 {
-        return Vec3 {
+        Vec3 {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
             z: self.z - rhs.z,
-        };
+        }
     }
 }
 
@@ -189,11 +224,11 @@ impl Mul for Vec3 {
 
     #[inline]
     fn mul(self, rhs: Vec3) -> Vec3 {
-        return Vec3 {
+        Vec3 {
             x: self.x * rhs.x,
             y: self.y * rhs.y,
             z: self.z * rhs.z,
-        };
+        }
     }
 }
 
@@ -202,11 +237,11 @@ impl Mul<f64> for Vec3 {
 
     #[inline]
     fn mul(self, rhs: f64) -> Vec3 {
-        return Vec3 {
+        Vec3 {
             x: self.x * rhs,
             y: self.y * rhs,
             z: self.z * rhs,
-        };
+        }
     }
 }
 
@@ -215,11 +250,11 @@ impl Mul<Vec3> for f64 {
 
     #[inline]
     fn mul(self, rhs: Vec3) -> Vec3 {
-        return Vec3 {
+        Vec3 {
             x: self * rhs.x,
             y: self * rhs.y,
             z: self * rhs.z,
-        };
+        }
     }
 }
 
@@ -228,11 +263,11 @@ impl Div for Vec3 {
 
     #[inline]
     fn div(self, rhs: Vec3) -> Vec3 {
-        return Vec3 {
+        Vec3 {
             x: self.x / rhs.x,
             y: self.y / rhs.y,
             z: self.z / rhs.z,
-        };
+        }
     }
 }
 
@@ -241,7 +276,7 @@ impl Div<f64> for Vec3 {
 
     #[inline]
     fn div(self, rhs: f64) -> Vec3 {
-        return (1.0 / rhs) * self;
+        (1.0 / rhs) * self
     }
 }
 
@@ -250,10 +285,10 @@ impl Neg for Vec3 {
 
     #[inline]
     fn neg(self) -> Vec3 {
-        return Vec3 {
+        Vec3 {
             x: -self.x,
             y: -self.y,
             z: -self.z,
-        };
+        }
     }
 }

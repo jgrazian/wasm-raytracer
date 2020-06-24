@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::fmt::Debug;
 
 use crate::hittable::HitRecord;
@@ -22,6 +23,7 @@ pub trait Mat {
 pub enum Material {
     Lambertian(Lambertian),
     Metal(Metal),
+    Dielectric(Dielectric),
 }
 
 impl Material {
@@ -39,6 +41,9 @@ impl Material {
             }
             Material::Metal(m) => {
                 m.scatter(r_in, &mut rec, &mut attenuation, &mut scattered, &mut rng)
+            }
+            Material::Dielectric(d) => {
+                d.scatter(r_in, &mut rec, &mut attenuation, &mut scattered, &mut rng)
             }
         }
     }
@@ -109,4 +114,67 @@ impl Mat for Metal {
         *attenuation = self.albedo;
         Vec3::dot(scattered.direction(), rec.normal) > 0.0
     }
+}
+
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
+pub struct Dielectric {
+    pub ref_idx: f64,
+}
+
+impl Dielectric {
+    pub fn new(ref_idx: f64) -> Dielectric {
+        Dielectric { ref_idx }
+    }
+}
+
+impl Mat for Dielectric {
+    fn scatter(
+        &self,
+        r_in: Ray,
+        rec: &mut HitRecord,
+        attenuation: &mut Color,
+        scattered: &mut Ray,
+        rng: &mut Rand,
+    ) -> bool {
+        *attenuation = Color::new(1.0, 1.0, 1.0);
+
+        let etai_over_etat: f64 = if rec.front_face {
+            1.0 / self.ref_idx
+        } else {
+            self.ref_idx
+        };
+
+        let unit_direction = Vec3::unit_vector(r_in.direction());
+
+        let cos_theta = if Vec3::dot(-unit_direction, rec.normal) < 1.0 {
+            Vec3::dot(-unit_direction, rec.normal)
+        } else {
+            1.0
+        };
+        let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
+
+        if etai_over_etat * sin_theta > 1.0 {
+            let reflected = Vec3::reflect(unit_direction, rec.normal);
+            *scattered = Ray::new(rec.p, reflected);
+            return true;
+        }
+
+        let reflect_prob = schlick(cos_theta, self.ref_idx);
+        if rng.rand_float() < reflect_prob {
+            let reflected = Vec3::reflect(unit_direction, rec.normal);
+            *scattered = Ray::new(rec.p, reflected);
+            return true;
+        }
+
+        let refracted = Vec3::refract(unit_direction, rec.normal, etai_over_etat);
+        *scattered = Ray::new(rec.p, refracted);
+
+        true
+    }
+}
+
+fn schlick(cosine: f64, ref_idx: f64) -> f64 {
+    let mut r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
+    r0 = r0 * r0;
+    r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
 }
