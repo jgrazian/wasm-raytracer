@@ -36,16 +36,19 @@ export class Image {
     /**
     * @param {number} w
     * @param {number} h
+    * @param {number} seed
     * @returns {Image}
     */
-    static new(w, h) {
-        var ret = wasm.image_new(w, h);
+    static new(w, h, seed) {
+        var ret = wasm.image_new(w, h, seed);
         return Image.__wrap(ret);
     }
     /**
+    * @param {number} samples_per_pixel
+    * @param {number} max_depth
     */
-    render() {
-        wasm.image_render(this.ptr);
+    render(samples_per_pixel, max_depth) {
+        wasm.image_render(this.ptr, samples_per_pixel, max_depth);
     }
     /**
     * @returns {number}
@@ -60,6 +63,12 @@ export class Image {
     get_image_data_len() {
         var ret = wasm.image_get_image_data_len(this.ptr);
         return ret >>> 0;
+    }
+    /**
+    * @param {number} seed
+    */
+    set_rng_seed(seed) {
+        wasm.image_set_rng_seed(this.ptr, seed);
     }
 }
 

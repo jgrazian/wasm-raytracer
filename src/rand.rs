@@ -22,6 +22,11 @@ impl Rand {
         }
     }
 
+    pub fn set_seed(&mut self, seed: u32) {
+        self.x = KX ^ seed;
+        self.y = KY ^ seed;
+    }
+
     // Xorshift 128, taken from German Wikipedia
     pub fn rand(&mut self) -> u32 {
         let t = self.x ^ self.x.wrapping_shl(11);

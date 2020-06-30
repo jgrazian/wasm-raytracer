@@ -53,37 +53,49 @@ pub struct Image {
 
 #[wasm_bindgen]
 impl Image {
-    pub fn new(w: usize, h: usize) -> Image {
-        let R = (PI / 4.0).cos();
+    pub fn new(w: usize, h: usize, seed: u32) -> Image {
+        let mut world = HittableList::new();
+
+        let ground = Hittable::Sphere(Sphere::new(
+            Point3::new(0.0, -1000.0, 0.0),
+            1000.0,
+            Material::Lambertian(Lambertian::new(Color::new(0.5, 0.5, 0.5))),
+        ));
         let sphere_1 = Hittable::Sphere(Sphere::new(
-            Point3::new(0.0, 0.0, -1.0),
-            0.5,
+            Point3::new(1.0, 1.0, 0.0),
+            1.0,
             Material::Lambertian(Lambertian::new(Color::new(0.0, 0.0, 1.0))),
         ));
         let sphere_2 = Hittable::Sphere(Sphere::new(
-            Point3::new(0.0, -100.5, -1.0),
-            100.0,
-            Material::Lambertian(Lambertian::new(Color::new(0.8, 0.8, 0.0))),
+            Point3::new(2.0, 1.0, -2.0),
+            1.0,
+            Material::Metal(Metal::new(Color::new(0.8, 0.8, 0.8), 0.05)),
         ));
         let sphere_3 = Hittable::Sphere(Sphere::new(
-            Point3::new(1.0, 0.0, -1.0),
-            0.5,
-            Material::Metal(Metal::new(Color::new(0.8, 0.6, 0.2), 0.2)),
+            Point3::new(0.0, 1.0, -5.0),
+            1.0,
+            Material::Lambertian(Lambertian::new(Color::new(1.0, 0.0, 0.0))),
         ));
         let sphere_4 = Hittable::Sphere(Sphere::new(
-            Point3::new(-1.0, 0.0, -1.0),
+            Point3::new(2.0, 1.0, 2.0),
+            1.0,
+            Material::Dielectric(Dielectric::new(2.4)),
+        ));
+        let sphere_5 = Hittable::Sphere(Sphere::new(
+            Point3::new(6.0, 0.5, 4.0),
             0.5,
-            Material::Dielectric(Dielectric::new(1.5)),
+            Material::Lambertian(Lambertian::new(Color::new(0.7, 0.0, 1.0))),
         ));
 
-        let mut world = HittableList::new();
+        world.add(ground);
         world.add(sphere_1);
         world.add(sphere_2);
         world.add(sphere_3);
         world.add(sphere_4);
+        world.add(sphere_5);
 
-        let lookfrom = Point3::new(3.0, 0.0, 2.0);
-        let lookat = Point3::new(0.0, 0.0, -1.0);
+        let lookfrom = Point3::new(-10.0, 2.0, 0.0);
+        let lookat = Point3::new(0.0, 1.0, 0.0);
 
         let cam = Camera::new(
             lookfrom,
@@ -92,7 +104,7 @@ impl Image {
             20.0,
             w as f64 / h as f64,
             0.1,
-            (lookfrom - lookat).length(),
+            10.0,
         );
 
         Image {
@@ -101,13 +113,11 @@ impl Image {
             data: vec![0; w * h * 4],
             camera: cam,
             world: world,
-            rng: Rand::new(0),
+            rng: Rand::new(seed),
         }
     }
 
-    pub fn render(&mut self) {
-        const samples_per_pixel: usize = 100;
-        const max_depth: usize = 50;
+    pub fn render(&mut self, samples_per_pixel: usize, max_depth: usize) {
         for j in (0..self.height).rev() {
             for i in 0..self.width {
                 let index = ((self.height - j - 1) * self.width + i) * 4;
@@ -134,6 +144,10 @@ impl Image {
 
     pub fn get_image_data_len(&self) -> usize {
         self.width * self.height * 4
+    }
+
+    pub fn set_rng_seed(&mut self, seed: u32) {
+        self.rng.set_seed(seed);
     }
 }
 
