@@ -3,7 +3,6 @@ mod common;
 mod hitable;
 mod hitable_list;
 mod material;
-mod rand;
 mod ray;
 mod sphere;
 mod vec3;
@@ -15,7 +14,6 @@ use common::*;
 use hitable::{HitRecord, Hitable};
 use hitable_list::HitableList;
 use material::*;
-use rand::Rand;
 use ray::Ray;
 use sphere::Sphere;
 use vec3::{Color, Point3, Vec3};
@@ -37,7 +35,7 @@ pub struct Image {
 
 #[wasm_bindgen]
 impl Image {
-    pub fn new(w: u32, h: u32, seed: u32) -> Image {
+    pub fn new(w: u32, h: u32) -> Image {
         let mut world = HitableList::new();
 
         let ground = Hitable::Sphere(Sphere::new(
@@ -107,7 +105,7 @@ impl Image {
 
                 let mut pixel_color = Color::zero();
 
-                for s in 0..samples_per_pixel {
+                for _ in 0..samples_per_pixel {
                     let u = (i as f32 + random_float(&mut random_seed)) / (self.width - 1) as f32;
                     let v = (j as f32 + random_float(&mut random_seed)) / (self.height - 1) as f32;
 

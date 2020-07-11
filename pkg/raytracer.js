@@ -36,11 +36,10 @@ export class Image {
     /**
     * @param {number} w
     * @param {number} h
-    * @param {number} seed
     * @returns {Image}
     */
-    static new(w, h, seed) {
-        var ret = wasm.image_new(w, h, seed);
+    static new(w, h) {
+        var ret = wasm.image_new(w, h);
         return Image.__wrap(ret);
     }
     /**

@@ -13,9 +13,7 @@ pub trait Mat {
         attenuation: &mut Color,
         scattered: &mut Ray,
         seed: &mut u32,
-    ) -> bool {
-        true
-    }
+    ) -> bool;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -62,7 +60,7 @@ impl Lambertian {
 impl Mat for Lambertian {
     fn scatter(
         &self,
-        r_in: Ray,
+        _r_in: Ray,
         rec: &mut HitRecord,
         attenuation: &mut Color,
         scattered: &mut Ray,
