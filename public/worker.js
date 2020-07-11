@@ -22,8 +22,7 @@ async function workerInit(iwidth, iheight, seed) {
 }
 
 function render(rays, bounces) {
-  img.set_rng_seed(getRandomInt(9999));
-  img.render(rays, bounces);
+  img.render(rays, bounces, getRandomInt(9999));
 
   let imgData = new ImageData(
     new Uint8ClampedArray(wasmMod.memory.buffer, ptr, ptr_len),

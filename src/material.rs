@@ -1,8 +1,7 @@
-use std::cmp::min;
 use std::fmt::Debug;
 
+use crate::common::random_float;
 use crate::hitable::HitRecord;
-use crate::rand::Rand;
 use crate::ray::Ray;
 use crate::vec3::{Color, Vec3};
 
@@ -13,7 +12,7 @@ pub trait Mat {
         rec: &mut HitRecord,
         attenuation: &mut Color,
         scattered: &mut Ray,
-        rng: &mut Rand,
+        seed: &mut u32,
     ) -> bool {
         true
     }
@@ -30,21 +29,15 @@ impl Material {
     pub fn scatter(
         &self,
         r_in: Ray,
-        mut rec: &mut HitRecord,
-        mut attenuation: &mut Color,
-        mut scattered: &mut Ray,
-        mut rng: &mut Rand,
+        rec: &mut HitRecord,
+        attenuation: &mut Color,
+        scattered: &mut Ray,
+        seed: &mut u32,
     ) -> bool {
         match self {
-            Material::Lambertian(l) => {
-                l.scatter(r_in, &mut rec, &mut attenuation, &mut scattered, &mut rng)
-            }
-            Material::Metal(m) => {
-                m.scatter(r_in, &mut rec, &mut attenuation, &mut scattered, &mut rng)
-            }
-            Material::Dielectric(d) => {
-                d.scatter(r_in, &mut rec, &mut attenuation, &mut scattered, &mut rng)
-            }
+            Material::Lambertian(l) => l.scatter(r_in, rec, attenuation, scattered, seed),
+            Material::Metal(m) => m.scatter(r_in, rec, attenuation, scattered, seed),
+            Material::Dielectric(d) => d.scatter(r_in, rec, attenuation, scattered, seed),
         }
     }
 }
@@ -73,9 +66,9 @@ impl Mat for Lambertian {
         rec: &mut HitRecord,
         attenuation: &mut Color,
         scattered: &mut Ray,
-        rng: &mut Rand,
+        seed: &mut u32,
     ) -> bool {
-        let scatter_direction = rec.normal + Vec3::random_in_unit_sphere(rng);
+        let scatter_direction = rec.normal + Vec3::random_in_unit_sphere(seed);
         *scattered = Ray::new(rec.p, scatter_direction);
         *attenuation = self.albedo;
         true
@@ -104,12 +97,12 @@ impl Mat for Metal {
         rec: &mut HitRecord,
         attenuation: &mut Color,
         scattered: &mut Ray,
-        rng: &mut Rand,
+        seed: &mut u32,
     ) -> bool {
         let reflected = Vec3::reflect(Vec3::unit_vector(r_in.direction()), rec.normal);
         *scattered = Ray::new(
             rec.p,
-            reflected + self.fuzz * Vec3::random_in_unit_sphere(rng),
+            reflected + self.fuzz * Vec3::random_in_unit_sphere(seed),
         );
         *attenuation = self.albedo;
         Vec3::dot(scattered.direction(), rec.normal) > 0.0
@@ -134,7 +127,7 @@ impl Mat for Dielectric {
         rec: &mut HitRecord,
         attenuation: &mut Color,
         scattered: &mut Ray,
-        rng: &mut Rand,
+        seed: &mut u32,
     ) -> bool {
         *attenuation = Color::new(1.0, 1.0, 1.0);
 
@@ -160,7 +153,7 @@ impl Mat for Dielectric {
         }
 
         let reflect_prob = schlick(cos_theta, self.ref_idx);
-        if rng.rand_float() < reflect_prob {
+        if random_float(seed) < reflect_prob {
             let reflected = Vec3::reflect(unit_direction, rec.normal);
             *scattered = Ray::new(rec.p, reflected);
             return true;

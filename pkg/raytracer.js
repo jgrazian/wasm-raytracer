@@ -46,9 +46,10 @@ export class Image {
     /**
     * @param {number} samples_per_pixel
     * @param {number} max_depth
+    * @param {number} random_seed
     */
-    render(samples_per_pixel, max_depth) {
-        wasm.image_render(this.ptr, samples_per_pixel, max_depth);
+    render(samples_per_pixel, max_depth, random_seed) {
+        wasm.image_render(this.ptr, samples_per_pixel, max_depth, random_seed);
     }
     /**
     * @returns {number}
@@ -63,12 +64,6 @@ export class Image {
     get_image_data_len() {
         var ret = wasm.image_get_image_data_len(this.ptr);
         return ret >>> 0;
-    }
-    /**
-    * @param {number} seed
-    */
-    set_rng_seed(seed) {
-        wasm.image_set_rng_seed(this.ptr, seed);
     }
 }
 

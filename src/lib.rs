@@ -1,4 +1,5 @@
 mod camera;
+mod common;
 mod hitable;
 mod hitable_list;
 mod material;
@@ -7,10 +8,10 @@ mod ray;
 mod sphere;
 mod vec3;
 
-use std::f32::consts::PI;
 use std::f32::INFINITY;
 
 use camera::Camera;
+use common::*;
 use hitable::{HitRecord, Hitable};
 use hitable_list::HitableList;
 use material::*;
@@ -25,22 +26,6 @@ use wasm_bindgen::prelude::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[inline]
-fn degrees_to_radians(degrees: f32) -> f32 {
-    degrees * PI / 180.0
-}
-
-#[inline]
-fn clamp(x: f32, min: f32, max: f32) -> f32 {
-    if x < min {
-        return min;
-    }
-    if x > max {
-        return max;
-    }
-    x
-}
-
 #[wasm_bindgen]
 pub struct Image {
     width: u32,
@@ -48,7 +33,6 @@ pub struct Image {
     data: Vec<u8>,
     camera: Camera,
     world: HitableList,
-    rng: Rand,
 }
 
 #[wasm_bindgen]
@@ -113,11 +97,10 @@ impl Image {
             data: vec![0; (w * h * 4) as usize],
             camera: cam,
             world: world,
-            rng: Rand::new(seed),
         }
     }
 
-    pub fn render(&mut self, samples_per_pixel: u32, max_depth: u32) {
+    pub fn render(&mut self, samples_per_pixel: u32, max_depth: u32, mut random_seed: u32) {
         for j in (0..self.height).rev() {
             for i in 0..self.width {
                 let index = (((self.height - j - 1) * self.width + i) * 4) as usize;
@@ -125,12 +108,12 @@ impl Image {
                 let mut pixel_color = Color::zero();
 
                 for s in 0..samples_per_pixel {
-                    let u = (i as f32 + self.rng.rand_float()) / (self.width - 1) as f32;
-                    let v = (j as f32 + self.rng.rand_float()) / (self.height - 1) as f32;
+                    let u = (i as f32 + random_float(&mut random_seed)) / (self.width - 1) as f32;
+                    let v = (j as f32 + random_float(&mut random_seed)) / (self.height - 1) as f32;
 
-                    let r = self.camera.get_ray(u, v, &mut self.rng);
+                    let r = self.camera.get_ray(u, v, &mut random_seed);
 
-                    pixel_color += ray_color(r, &self.world, &mut self.rng, max_depth);
+                    pixel_color += ray_color(r, &self.world, &mut random_seed, max_depth);
                 }
 
                 self.write_color(pixel_color, index, samples_per_pixel);
@@ -144,10 +127,6 @@ impl Image {
 
     pub fn get_image_data_len(&self) -> u32 {
         self.width * self.height * 4
-    }
-
-    pub fn set_rng_seed(&mut self, seed: u32) {
-        self.rng.set_seed(seed);
     }
 }
 
@@ -169,7 +148,7 @@ impl Image {
     }
 }
 
-fn ray_color(r: Ray, world: &HitableList, mut rng: &mut Rand, depth: u32) -> Color {
+fn ray_color(r: Ray, world: &HitableList, seed: &mut u32, depth: u32) -> Color {
     let mut rec: HitRecord = Default::default();
     if depth <= 0 {
         return Color::zero();
@@ -181,9 +160,9 @@ fn ray_color(r: Ray, world: &HitableList, mut rng: &mut Rand, depth: u32) -> Col
         let mut rec_copy = rec;
         if rec
             .material
-            .scatter(r, &mut rec_copy, &mut attenuation, &mut scattered, &mut rng)
+            .scatter(r, &mut rec_copy, &mut attenuation, &mut scattered, seed)
         {
-            return attenuation * ray_color(scattered, world, rng, depth - 1);
+            return attenuation * ray_color(scattered, world, seed, depth - 1);
         }
         return Color::new(0.0, 0.0, 0.0);
     }

@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use crate::rand::Rand;
+use crate::common::{random_float, random_range};
 
 pub type Point3 = Vec3;
 pub type Color = Vec3;
@@ -71,27 +71,27 @@ impl Vec3 {
     }
 
     #[inline]
-    pub fn random(rng: &mut Rand) -> Vec3 {
+    pub fn random(seed: &mut u32) -> Vec3 {
         Vec3 {
-            x: rng.rand_float(),
-            y: rng.rand_float(),
-            z: rng.rand_float(),
+            x: random_float(seed),
+            y: random_float(seed),
+            z: random_float(seed),
         }
     }
 
     #[inline]
-    pub fn random_range(rng: &mut Rand, min: f32, max: f32) -> Vec3 {
+    pub fn random_range(seed: &mut u32, min: f32, max: f32) -> Vec3 {
         Vec3 {
-            x: rng.rand_float_range(min, max),
-            y: rng.rand_float_range(min, max),
-            z: rng.rand_float_range(min, max),
+            x: random_range(seed, min, max),
+            y: random_range(seed, min, max),
+            z: random_range(seed, min, max),
         }
     }
 
     #[inline]
-    pub fn random_in_unit_sphere(rng: &mut Rand) -> Vec3 {
+    pub fn random_in_unit_sphere(seed: &mut u32) -> Vec3 {
         loop {
-            let p = Vec3::random_range(rng, -1.0, 1.0);
+            let p = Vec3::random_range(seed, -1.0, 1.0);
             if p.length_squared() < 1.0 {
                 return p;
             }
@@ -99,9 +99,9 @@ impl Vec3 {
     }
 
     #[inline]
-    pub fn random_unit_vector(rng: &mut Rand) -> Vec3 {
-        let a = rng.rand_float_range(0.0, 2.0 * std::f32::consts::PI);
-        let z = rng.rand_float_range(-1.0, 1.0);
+    pub fn random_unit_vector(seed: &mut u32) -> Vec3 {
+        let a = random_range(seed, 0.0, 2.0 * std::f32::consts::PI);
+        let z = random_range(seed, -1.0, 1.0);
         let r = (1.0 - z * z).sqrt();
         Vec3 {
             x: r * a.cos(),
@@ -111,11 +111,11 @@ impl Vec3 {
     }
 
     #[inline]
-    pub fn random_in_unit_disk(rng: &mut Rand) -> Vec3 {
+    pub fn random_in_unit_disk(seed: &mut u32) -> Vec3 {
         loop {
             let p = Vec3::new(
-                rng.rand_float_range(-1.0, 1.0),
-                rng.rand_float_range(-1.0, 1.0),
+                random_range(seed, -1.0, 1.0),
+                random_range(seed, -1.0, 1.0),
                 0.0,
             );
             if p.length_squared() < 1.0 {

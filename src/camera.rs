@@ -1,5 +1,4 @@
 use crate::degrees_to_radians;
-use crate::rand::Rand;
 use crate::ray::Ray;
 use crate::vec3::{Point3, Vec3};
 
@@ -52,8 +51,8 @@ impl Camera {
         }
     }
 
-    pub fn get_ray(&self, s: f32, t: f32, rng: &mut Rand) -> Ray {
-        let rd = self.lens_radius * Vec3::random_in_unit_disk(rng);
+    pub fn get_ray(&self, s: f32, t: f32, seed: &mut u32) -> Ray {
+        let rd = self.lens_radius * Vec3::random_in_unit_disk(seed);
         let offset = self.u * rd.x() + self.v * rd.y();
 
         Ray::new(
