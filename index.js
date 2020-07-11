@@ -62,13 +62,3 @@ function element_average(a, b) {
     (workers_returned + 1)
   );
 }
-
-// myWorker.onmessage = function (e) {
-//   console.log(e);
-//   let imgData = new ImageData(
-//     e.data,
-//     canvas.width,
-//     canvas.height,
-//   );
-//   ctx.putImageData(imgData, 0, 0);
-// };

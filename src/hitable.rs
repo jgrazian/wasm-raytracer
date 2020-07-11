@@ -6,7 +6,7 @@ use crate::vec3::{Point3, Vec3};
 use std::fmt::Debug;
 
 pub trait Hit {
-    fn hit(&self, r: Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool;
+    fn hit(&self, r: Ray, t_min: f32, t_max: f32, rec: &mut HitRecord) -> bool;
 }
 
 #[derive(Debug, PartialEq, Default, Clone, Copy)]
@@ -14,19 +14,19 @@ pub struct HitRecord {
     pub p: Point3,
     pub normal: Vec3,
     pub material: Material,
-    pub t: f64,
+    pub t: f32,
     pub front_face: bool,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Hittable {
+pub enum Hitable {
     Sphere(Sphere),
 }
 
-impl Hit for Hittable {
-    fn hit(&self, r: Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
+impl Hit for Hitable {
+    fn hit(&self, r: Ray, t_min: f32, t_max: f32, rec: &mut HitRecord) -> bool {
         match self {
-            Hittable::Sphere(s) => s.hit(r, t_min, t_max, rec),
+            Hitable::Sphere(s) => s.hit(r, t_min, t_max, rec),
         }
     }
 }

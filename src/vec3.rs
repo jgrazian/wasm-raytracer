@@ -8,13 +8,13 @@ pub type Color = Vec3;
 
 #[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub struct Vec3 {
-    x: f64,
-    y: f64,
-    z: f64,
+    x: f32,
+    y: f32,
+    z: f32,
 }
 
 impl Vec3 {
-    pub fn new(x: f64, y: f64, z: f64) -> Vec3 {
+    pub fn new(x: f32, y: f32, z: f32) -> Vec3 {
         Vec3 { x: x, y: y, z: z }
     }
 
@@ -26,28 +26,28 @@ impl Vec3 {
         }
     }
 
-    pub fn x(&self) -> f64 {
+    pub fn x(&self) -> f32 {
         self.x
     }
 
-    pub fn y(&self) -> f64 {
+    pub fn y(&self) -> f32 {
         self.y
     }
 
-    pub fn z(&self) -> f64 {
+    pub fn z(&self) -> f32 {
         self.z
     }
 
-    pub fn length(&self) -> f64 {
+    pub fn length(&self) -> f32 {
         self.length_squared().sqrt()
     }
 
-    pub fn length_squared(&self) -> f64 {
+    pub fn length_squared(&self) -> f32 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
     #[inline]
-    pub fn dot(u: Vec3, v: Vec3) -> f64 {
+    pub fn dot(u: Vec3, v: Vec3) -> f32 {
         u.x * v.x + u.y * v.y + u.z * v.z
     }
 
@@ -80,7 +80,7 @@ impl Vec3 {
     }
 
     #[inline]
-    pub fn random_range(rng: &mut Rand, min: f64, max: f64) -> Vec3 {
+    pub fn random_range(rng: &mut Rand, min: f32, max: f32) -> Vec3 {
         Vec3 {
             x: rng.rand_float_range(min, max),
             y: rng.rand_float_range(min, max),
@@ -100,7 +100,7 @@ impl Vec3 {
 
     #[inline]
     pub fn random_unit_vector(rng: &mut Rand) -> Vec3 {
-        let a = rng.rand_float_range(0.0, 2.0 * std::f64::consts::PI);
+        let a = rng.rand_float_range(0.0, 2.0 * std::f32::consts::PI);
         let z = rng.rand_float_range(-1.0, 1.0);
         let r = (1.0 - z * z).sqrt();
         Vec3 {
@@ -130,7 +130,7 @@ impl Vec3 {
     }
 
     #[inline]
-    pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f64) -> Vec3 {
+    pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) -> Vec3 {
         let cos_theta = Vec3::dot(-uv, n);
         let r_out_parallel = etai_over_etat * (uv + cos_theta * n);
         let r_out_perp = -(1.0 - r_out_parallel.length_squared()).sqrt() * n;
@@ -193,11 +193,11 @@ impl Add for Vec3 {
     }
 }
 
-impl Add<f64> for Vec3 {
+impl Add<f32> for Vec3 {
     type Output = Vec3;
 
     #[inline]
-    fn add(self, rhs: f64) -> Vec3 {
+    fn add(self, rhs: f32) -> Vec3 {
         Vec3 {
             x: self.x + rhs,
             y: self.y + rhs,
@@ -232,11 +232,11 @@ impl Mul for Vec3 {
     }
 }
 
-impl Mul<f64> for Vec3 {
+impl Mul<f32> for Vec3 {
     type Output = Vec3;
 
     #[inline]
-    fn mul(self, rhs: f64) -> Vec3 {
+    fn mul(self, rhs: f32) -> Vec3 {
         Vec3 {
             x: self.x * rhs,
             y: self.y * rhs,
@@ -245,7 +245,7 @@ impl Mul<f64> for Vec3 {
     }
 }
 
-impl Mul<Vec3> for f64 {
+impl Mul<Vec3> for f32 {
     type Output = Vec3;
 
     #[inline]
@@ -271,11 +271,11 @@ impl Div for Vec3 {
     }
 }
 
-impl Div<f64> for Vec3 {
+impl Div<f32> for Vec3 {
     type Output = Vec3;
 
     #[inline]
-    fn div(self, rhs: f64) -> Vec3 {
+    fn div(self, rhs: f32) -> Vec3 {
         (1.0 / rhs) * self
     }
 }

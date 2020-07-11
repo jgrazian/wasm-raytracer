@@ -1,7 +1,7 @@
 use std::cmp::min;
 use std::fmt::Debug;
 
-use crate::hittable::HitRecord;
+use crate::hitable::HitRecord;
 use crate::rand::Rand;
 use crate::ray::Ray;
 use crate::vec3::{Color, Vec3};
@@ -85,11 +85,11 @@ impl Mat for Lambertian {
 #[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub struct Metal {
     pub albedo: Color,
-    pub fuzz: f64,
+    pub fuzz: f32,
 }
 
 impl Metal {
-    pub fn new(a: Color, f: f64) -> Metal {
+    pub fn new(a: Color, f: f32) -> Metal {
         Metal {
             albedo: a,
             fuzz: if f < 1.0 { f } else { 1.0 },
@@ -118,11 +118,11 @@ impl Mat for Metal {
 
 #[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub struct Dielectric {
-    pub ref_idx: f64,
+    pub ref_idx: f32,
 }
 
 impl Dielectric {
-    pub fn new(ref_idx: f64) -> Dielectric {
+    pub fn new(ref_idx: f32) -> Dielectric {
         Dielectric { ref_idx }
     }
 }
@@ -138,7 +138,7 @@ impl Mat for Dielectric {
     ) -> bool {
         *attenuation = Color::new(1.0, 1.0, 1.0);
 
-        let etai_over_etat: f64 = if rec.front_face {
+        let etai_over_etat: f32 = if rec.front_face {
             1.0 / self.ref_idx
         } else {
             self.ref_idx
@@ -173,7 +173,7 @@ impl Mat for Dielectric {
     }
 }
 
-fn schlick(cosine: f64, ref_idx: f64) -> f64 {
+fn schlick(cosine: f32, ref_idx: f32) -> f32 {
     let mut r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
     r0 = r0 * r0;
     r0 + (1.0 - r0) * (1.0 - cosine).powi(5)

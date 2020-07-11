@@ -1,18 +1,18 @@
 mod camera;
-mod hittable;
-mod hittable_list;
+mod hitable;
+mod hitable_list;
 mod material;
 mod rand;
 mod ray;
 mod sphere;
 mod vec3;
 
-use std::f64::consts::PI;
-use std::f64::INFINITY;
+use std::f32::consts::PI;
+use std::f32::INFINITY;
 
 use camera::Camera;
-use hittable::{HitRecord, Hittable};
-use hittable_list::HittableList;
+use hitable::{HitRecord, Hitable};
+use hitable_list::HitableList;
 use material::*;
 use rand::Rand;
 use ray::Ray;
@@ -26,12 +26,12 @@ use wasm_bindgen::prelude::*;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[inline]
-fn degrees_to_radians(degrees: f64) -> f64 {
+fn degrees_to_radians(degrees: f32) -> f32 {
     degrees * PI / 180.0
 }
 
 #[inline]
-fn clamp(x: f64, min: f64, max: f64) -> f64 {
+fn clamp(x: f32, min: f32, max: f32) -> f32 {
     if x < min {
         return min;
     }
@@ -43,45 +43,45 @@ fn clamp(x: f64, min: f64, max: f64) -> f64 {
 
 #[wasm_bindgen]
 pub struct Image {
-    width: usize,
-    height: usize,
+    width: u32,
+    height: u32,
     data: Vec<u8>,
     camera: Camera,
-    world: HittableList,
+    world: HitableList,
     rng: Rand,
 }
 
 #[wasm_bindgen]
 impl Image {
-    pub fn new(w: usize, h: usize, seed: u32) -> Image {
-        let mut world = HittableList::new();
+    pub fn new(w: u32, h: u32, seed: u32) -> Image {
+        let mut world = HitableList::new();
 
-        let ground = Hittable::Sphere(Sphere::new(
+        let ground = Hitable::Sphere(Sphere::new(
             Point3::new(0.0, -1000.0, 0.0),
             1000.0,
             Material::Lambertian(Lambertian::new(Color::new(0.5, 0.5, 0.5))),
         ));
-        let sphere_1 = Hittable::Sphere(Sphere::new(
+        let sphere_1 = Hitable::Sphere(Sphere::new(
             Point3::new(1.0, 1.0, 0.0),
             1.0,
             Material::Lambertian(Lambertian::new(Color::new(0.0, 0.0, 1.0))),
         ));
-        let sphere_2 = Hittable::Sphere(Sphere::new(
+        let sphere_2 = Hitable::Sphere(Sphere::new(
             Point3::new(2.0, 1.0, -2.0),
             1.0,
             Material::Metal(Metal::new(Color::new(0.8, 0.8, 0.8), 0.05)),
         ));
-        let sphere_3 = Hittable::Sphere(Sphere::new(
+        let sphere_3 = Hitable::Sphere(Sphere::new(
             Point3::new(0.0, 1.0, -5.0),
             1.0,
             Material::Lambertian(Lambertian::new(Color::new(1.0, 0.0, 0.0))),
         ));
-        let sphere_4 = Hittable::Sphere(Sphere::new(
+        let sphere_4 = Hitable::Sphere(Sphere::new(
             Point3::new(2.0, 1.0, 2.0),
             1.0,
             Material::Dielectric(Dielectric::new(2.4)),
         ));
-        let sphere_5 = Hittable::Sphere(Sphere::new(
+        let sphere_5 = Hitable::Sphere(Sphere::new(
             Point3::new(6.0, 0.5, 4.0),
             0.5,
             Material::Lambertian(Lambertian::new(Color::new(0.7, 0.0, 1.0))),
@@ -102,7 +102,7 @@ impl Image {
             lookat,
             Vec3::new(0.0, 1.0, 0.0),
             20.0,
-            w as f64 / h as f64,
+            w as f32 / h as f32,
             0.1,
             10.0,
         );
@@ -110,23 +110,23 @@ impl Image {
         Image {
             width: w,
             height: h,
-            data: vec![0; w * h * 4],
+            data: vec![0; (w * h * 4) as usize],
             camera: cam,
             world: world,
             rng: Rand::new(seed),
         }
     }
 
-    pub fn render(&mut self, samples_per_pixel: usize, max_depth: usize) {
+    pub fn render(&mut self, samples_per_pixel: u32, max_depth: u32) {
         for j in (0..self.height).rev() {
             for i in 0..self.width {
-                let index = ((self.height - j - 1) * self.width + i) * 4;
+                let index = (((self.height - j - 1) * self.width + i) * 4) as usize;
 
                 let mut pixel_color = Color::zero();
 
                 for s in 0..samples_per_pixel {
-                    let u = (i as f64 + self.rng.rand_float()) / (self.width - 1) as f64;
-                    let v = (j as f64 + self.rng.rand_float()) / (self.height - 1) as f64;
+                    let u = (i as f32 + self.rng.rand_float()) / (self.width - 1) as f32;
+                    let v = (j as f32 + self.rng.rand_float()) / (self.height - 1) as f32;
 
                     let r = self.camera.get_ray(u, v, &mut self.rng);
 
@@ -142,7 +142,7 @@ impl Image {
         self.data.as_ptr()
     }
 
-    pub fn get_image_data_len(&self) -> usize {
+    pub fn get_image_data_len(&self) -> u32 {
         self.width * self.height * 4
     }
 
@@ -152,12 +152,12 @@ impl Image {
 }
 
 impl Image {
-    fn write_color(&mut self, pixel_color: Color, index: usize, samples_per_pixel: usize) {
+    fn write_color(&mut self, pixel_color: Color, index: usize, samples_per_pixel: u32) {
         let mut r = pixel_color.x();
         let mut g = pixel_color.y();
         let mut b = pixel_color.z();
 
-        let scale = 1.0 / samples_per_pixel as f64;
+        let scale = 1.0 / samples_per_pixel as f32;
         r = (scale * r).sqrt();
         g = (scale * g).sqrt();
         b = (scale * b).sqrt();
@@ -169,7 +169,7 @@ impl Image {
     }
 }
 
-fn ray_color(r: Ray, world: &HittableList, mut rng: &mut Rand, depth: usize) -> Color {
+fn ray_color(r: Ray, world: &HitableList, mut rng: &mut Rand, depth: u32) -> Color {
     let mut rec: HitRecord = Default::default();
     if depth <= 0 {
         return Color::zero();

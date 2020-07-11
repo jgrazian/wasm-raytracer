@@ -1,4 +1,4 @@
-use crate::hittable::{Hit, HitRecord};
+use crate::hitable::{Hit, HitRecord};
 use crate::material::Material;
 use crate::ray::Ray;
 use crate::vec3::{Point3, Vec3};
@@ -6,12 +6,12 @@ use crate::vec3::{Point3, Vec3};
 #[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub struct Sphere {
     center: Point3,
-    radius: f64,
+    radius: f32,
     material: Material,
 }
 
 impl Sphere {
-    pub fn new(c: Point3, r: f64, mat: Material) -> Sphere {
+    pub fn new(c: Point3, r: f32, mat: Material) -> Sphere {
         Sphere {
             center: c,
             radius: r,
@@ -21,7 +21,7 @@ impl Sphere {
 }
 
 impl Hit for Sphere {
-    fn hit(&self, r: Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
+    fn hit(&self, r: Ray, t_min: f32, t_max: f32, rec: &mut HitRecord) -> bool {
         let oc = r.origin() - self.center;
         let a = r.direction().length_squared();
         let half_b = Vec3::dot(oc, r.direction());

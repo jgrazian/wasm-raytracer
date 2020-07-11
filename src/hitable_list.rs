@@ -1,17 +1,17 @@
-use crate::hittable::{Hit, HitRecord, Hittable};
+use crate::hitable::{Hit, HitRecord, Hitable};
 use crate::ray::Ray;
 
 #[derive(Debug, Default, Clone)]
-pub struct HittableList {
-    objects: Vec<Hittable>,
+pub struct HitableList {
+    objects: Vec<Hitable>,
 }
 
-impl HittableList {
-    pub fn new() -> HittableList {
-        HittableList { objects: vec![] }
+impl HitableList {
+    pub fn new() -> HitableList {
+        HitableList { objects: vec![] }
     }
 
-    pub fn add(&mut self, object: Hittable) {
+    pub fn add(&mut self, object: Hitable) {
         self.objects.push(object);
     }
 
@@ -19,7 +19,7 @@ impl HittableList {
         self.objects.clear();
     }
 
-    pub fn hit(&self, r: Ray, t_min: f64, t_max: f64, rec: &mut HitRecord) -> bool {
+    pub fn hit(&self, r: Ray, t_min: f32, t_max: f32, rec: &mut HitRecord) -> bool {
         let mut tmp_rec: HitRecord = Default::default();
         let mut hit_anything = false;
         let mut closest_so_far = t_max;

@@ -37,30 +37,18 @@ impl Rand {
         return self.w;
     }
 
-    pub fn shuffle<T>(&mut self, a: &mut [T]) {
-        if a.len() == 0 {
-            return;
-        }
-        let mut i = a.len() - 1;
-        while i > 0 {
-            let j = (self.rand() as usize) % (i + 1);
-            a.swap(i, j);
-            i -= 1;
-        }
-    }
-
     pub fn rand_range(&mut self, a: i32, b: i32) -> i32 {
         let m = (b - a + 1) as u32;
         return a + (self.rand() % m) as i32;
     }
 
     #[inline]
-    pub fn rand_float(&mut self) -> f64 {
-        (self.rand() as f64) / (<u32>::max_value() as f64)
+    pub fn rand_float(&mut self) -> f32 {
+        (self.rand() as f32) / (<u32>::max_value() as f32)
     }
 
     #[inline]
-    pub fn rand_float_range(&mut self, a: f64, b: f64) -> f64 {
+    pub fn rand_float_range(&mut self, a: f32, b: f32) -> f32 {
         a + (b - a) * self.rand_float()
     }
 }
