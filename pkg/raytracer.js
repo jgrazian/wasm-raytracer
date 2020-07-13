@@ -64,6 +64,28 @@ export class Image {
         var ret = wasm.image_get_image_data_len(this.ptr);
         return ret >>> 0;
     }
+    /**
+    * @param {number} x
+    * @param {number} y
+    * @param {number} z
+    */
+    set_camera_origin(x, y, z) {
+        wasm.image_set_camera_origin(this.ptr, x, y, z);
+    }
+    /**
+    * @param {number} x
+    * @param {number} y
+    * @param {number} z
+    */
+    set_camera_target(x, y, z) {
+        wasm.image_set_camera_target(this.ptr, x, y, z);
+    }
+    /**
+    * @param {number} d
+    */
+    set_camera_focus(d) {
+        wasm.image_set_camera_focus(this.ptr, d);
+    }
 }
 
 async function load(module, imports) {

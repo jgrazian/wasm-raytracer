@@ -7,6 +7,8 @@ let height;
 let ptr;
 let ptr_len;
 
+let noRender = false;
+
 async function workerInit(iwidth, iheight, seed) {
   wasmMod = await init();
 
@@ -30,12 +32,39 @@ function render(rays, bounces) {
     height,
   );
 
+  if (noRender) {
+    return;
+  }
+
   postMessage(
     {
       msg: "render",
       data: new Uint8ClampedArray(wasmMod.memory.buffer, ptr, ptr_len),
     },
   );
+}
+
+function set_camera(cameraData) {
+  noRender = true;
+
+  img.set_camera_origin(
+    cameraData.origin_x,
+    cameraData.origin_y,
+    cameraData.origin_z,
+  );
+  img.set_camera_target(
+    cameraData.target_x,
+    cameraData.target_y,
+    cameraData.target_z,
+  );
+
+  let dx = cameraData.origin_x - cameraData.target_x;
+  let dy = cameraData.origin_y - cameraData.target_y;
+  let dz = cameraData.origin_z - cameraData.target_z;
+
+  img.set_camera_focus(Math.sqrt(dx * dx + dy * dy + dz * dz));
+
+  postMessage({ msg: "set_camera" });
 }
 
 onmessage = async function (e) {
@@ -45,7 +74,11 @@ onmessage = async function (e) {
       await workerInit(data.width, data.height, data.seed);
       break;
     case "render":
+      noRender = false;
       render(data.rays, data.bounces);
+      break;
+    case "set_camera":
+      set_camera(data.cameraData);
       break;
     case "ping":
       postMessage({ msg: "pong" });

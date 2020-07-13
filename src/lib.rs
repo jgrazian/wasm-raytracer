@@ -79,15 +79,7 @@ impl Image {
         let lookfrom = Point3::new(-10.0, 2.0, 0.0);
         let lookat = Point3::new(0.0, 1.0, 0.0);
 
-        let cam = Camera::new(
-            lookfrom,
-            lookat,
-            Vec3::new(0.0, 1.0, 0.0),
-            20.0,
-            w as f32 / h as f32,
-            0.1,
-            10.0,
-        );
+        let cam = Camera::new(lookfrom, lookat, 20.0, w as f32 / h as f32, 0.1, 10.0);
 
         Image {
             width: w,
@@ -125,6 +117,18 @@ impl Image {
 
     pub fn get_image_data_len(&self) -> u32 {
         self.width * self.height * 4
+    }
+
+    pub fn set_camera_origin(&mut self, x: f32, y: f32, z: f32) {
+        self.camera.set_origin(Vec3::new(x, y, z));
+    }
+
+    pub fn set_camera_target(&mut self, x: f32, y: f32, z: f32) {
+        self.camera.set_target(Vec3::new(x, y, z));
+    }
+
+    pub fn set_camera_focus(&mut self, d: f32) {
+        self.camera.set_focus(d);
     }
 }
 
