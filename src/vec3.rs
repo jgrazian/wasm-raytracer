@@ -88,9 +88,9 @@ impl Vec3 {
     #[inline(always)]
     pub fn random(rng: &mut Rng) -> Self {
         Self {
-            x: rng.range(-1.0, 1.0),
-            y: rng.range(-1.0, 1.0),
-            z: rng.range(-1.0, 1.0),
+            x: rng.gen(),
+            y: rng.gen(),
+            z: rng.gen(),
         }
     }
 
@@ -105,7 +105,7 @@ impl Vec3 {
 
     #[inline(always)]
     pub fn random_unit_sphere(rng: &mut Rng) -> Self {
-        Self::random(rng).unit()
+        Self::random_range(rng, -1.0, 1.0).unit()
     }
 
     #[inline(always)]

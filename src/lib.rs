@@ -28,7 +28,7 @@ impl Renderer {
     }
 
     pub fn render(&self, n_samples: usize) {
-        let mut rng = Rng::new(1234);
+        let mut rng = Rng::new(1232);
         let max_depth = 50;
 
         // PNG
@@ -123,7 +123,7 @@ fn random_scene(rng: &mut Rng) -> HittableList {
             let center = Vec3::new(a as f64 + 0.9 * rng.gen(), 0.2, b as f64 + 0.9 * rng.gen());
 
             if (center - Vec3::new(4.0, 0.2, 0.0)).len() > 0.9 {
-                let mut mat;
+                let mat;
 
                 if choose_mat < 0.8 {
                     let albedo = Vec3::random(rng) * Vec3::random(rng);
