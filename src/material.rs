@@ -1,171 +1,113 @@
-use std::fmt::Debug;
+use enum_dispatch::enum_dispatch;
 
-use crate::common::random_float;
-use crate::hitable::HitRecord;
+use crate::common::Rng;
+use crate::hittable::HitRec;
 use crate::ray::Ray;
-use crate::vec3::{Color, Vec3};
+use crate::vec3::Vec3;
 
-pub trait Mat {
-    fn scatter(
-        &self,
-        r_in: Ray,
-        rec: &mut HitRecord,
-        attenuation: &mut Color,
-        scattered: &mut Ray,
-        seed: &mut u32,
-    ) -> bool;
+#[enum_dispatch]
+pub trait Material {
+    fn scatter(&self, r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)>;
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Material {
-    Lambertian(Lambertian),
-    Metal(Metal),
-    Dielectric(Dielectric),
+#[enum_dispatch(Material)]
+#[derive(Clone, Debug)]
+pub enum Mat {
+    Lambertian,
+    Metal,
+    Dielectric,
 }
 
-impl Material {
-    pub fn scatter(
-        &self,
-        r_in: Ray,
-        rec: &mut HitRecord,
-        attenuation: &mut Color,
-        scattered: &mut Ray,
-        seed: &mut u32,
-    ) -> bool {
-        match self {
-            Material::Lambertian(l) => l.scatter(r_in, rec, attenuation, scattered, seed),
-            Material::Metal(m) => m.scatter(r_in, rec, attenuation, scattered, seed),
-            Material::Dielectric(d) => d.scatter(r_in, rec, attenuation, scattered, seed),
-        }
-    }
-}
-
-impl Default for Material {
-    fn default() -> Material {
-        Material::Lambertian(Default::default())
-    }
-}
-
-#[derive(Debug, PartialEq, Default, Clone, Copy)]
+#[derive(Default, Debug, Clone)]
 pub struct Lambertian {
-    pub albedo: Color,
+    pub albedo: Vec3,
 }
 
 impl Lambertian {
-    pub fn new(a: Color) -> Lambertian {
-        Lambertian { albedo: a }
+    pub fn new(albedo: Vec3) -> Self {
+        Self { albedo }
     }
 }
 
-impl Mat for Lambertian {
-    fn scatter(
-        &self,
-        _r_in: Ray,
-        rec: &mut HitRecord,
-        attenuation: &mut Color,
-        scattered: &mut Ray,
-        seed: &mut u32,
-    ) -> bool {
-        let scatter_direction = rec.normal + Vec3::random_in_unit_sphere(seed);
-        *scattered = Ray::new(rec.p, scatter_direction);
-        *attenuation = self.albedo;
-        true
+impl Material for Lambertian {
+    #[inline(always)]
+    fn scatter(&self, _r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
+        let mut scatter_dir = rec.n + Vec3::random_unit(rng);
+
+        if scatter_dir.near_zero() {
+            scatter_dir = rec.n;
+        }
+
+        Some((Ray::new(rec.p, scatter_dir), self.albedo))
     }
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy)]
+#[derive(Default, Debug, Clone)]
 pub struct Metal {
-    pub albedo: Color,
-    pub fuzz: f32,
+    pub albedo: Vec3,
+    pub fuzz: f64,
 }
 
 impl Metal {
-    pub fn new(a: Color, f: f32) -> Metal {
-        Metal {
-            albedo: a,
-            fuzz: if f < 1.0 { f } else { 1.0 },
-        }
+    pub fn new(albedo: Vec3, fuzz: f64) -> Self {
+        Self { albedo, fuzz }
     }
 }
 
-impl Mat for Metal {
-    fn scatter(
-        &self,
-        r_in: Ray,
-        rec: &mut HitRecord,
-        attenuation: &mut Color,
-        scattered: &mut Ray,
-        seed: &mut u32,
-    ) -> bool {
-        let reflected = Vec3::reflect(Vec3::unit_vector(r_in.direction()), rec.normal);
-        *scattered = Ray::new(
-            rec.p,
-            reflected + self.fuzz * Vec3::random_in_unit_sphere(seed),
-        );
-        *attenuation = self.albedo;
-        Vec3::dot(scattered.direction(), rec.normal) > 0.0
+impl Material for Metal {
+    #[inline(always)]
+    fn scatter(&self, r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
+        let reflected = Vec3::reflect(r_in.d.unit(), rec.n);
+
+        let scattered = Ray::new(rec.p, reflected + self.fuzz * Vec3::random_unit(rng));
+
+        return if Vec3::dot(scattered.d, rec.n) > 0.0 {
+            Some((scattered, self.albedo))
+        } else {
+            None
+        };
     }
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy)]
+#[derive(Default, Debug, Clone)]
 pub struct Dielectric {
-    pub ref_idx: f32,
+    pub ir: f64,
 }
 
 impl Dielectric {
-    pub fn new(ref_idx: f32) -> Dielectric {
-        Dielectric { ref_idx }
+    pub fn new(ir: f64) -> Self {
+        Self { ir }
+    }
+
+    #[inline(always)]
+    fn reflectance(cosine: f64, ref_idx: f64) -> f64 {
+        let mut r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
+        r0 = r0 * r0;
+        r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
     }
 }
 
-impl Mat for Dielectric {
-    fn scatter(
-        &self,
-        r_in: Ray,
-        rec: &mut HitRecord,
-        attenuation: &mut Color,
-        scattered: &mut Ray,
-        seed: &mut u32,
-    ) -> bool {
-        *attenuation = Color::new(1.0, 1.0, 1.0);
-
-        let etai_over_etat: f32 = if rec.front_face {
-            1.0 / self.ref_idx
+impl Material for Dielectric {
+    #[inline(always)]
+    fn scatter(&self, r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
+        let refraction_ratio = if rec.front_face {
+            1.0 / self.ir
         } else {
-            self.ref_idx
+            self.ir
         };
 
-        let unit_direction = Vec3::unit_vector(r_in.direction());
-
-        let cos_theta = if Vec3::dot(-unit_direction, rec.normal) < 1.0 {
-            Vec3::dot(-unit_direction, rec.normal)
-        } else {
-            1.0
-        };
+        let unit_dir = r_in.d.unit();
+        let cos_theta = Vec3::dot(-unit_dir, rec.n).min(1.0);
         let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
 
-        if etai_over_etat * sin_theta > 1.0 {
-            let reflected = Vec3::reflect(unit_direction, rec.normal);
-            *scattered = Ray::new(rec.p, reflected);
-            return true;
-        }
+        let cannot_refract = refraction_ratio * sin_theta > 1.0;
+        let angle_criteria = Self::reflectance(cos_theta, refraction_ratio) > rng.gen();
+        let dir = if cannot_refract || angle_criteria {
+            Vec3::reflect(unit_dir, rec.n)
+        } else {
+            Vec3::refract(unit_dir, rec.n, refraction_ratio)
+        };
 
-        let reflect_prob = schlick(cos_theta, self.ref_idx);
-        if random_float(seed) < reflect_prob {
-            let reflected = Vec3::reflect(unit_direction, rec.normal);
-            *scattered = Ray::new(rec.p, reflected);
-            return true;
-        }
-
-        let refracted = Vec3::refract(unit_direction, rec.normal, etai_over_etat);
-        *scattered = Ray::new(rec.p, refracted);
-
-        true
+        Some((Ray::new(rec.p, dir), Vec3::splat(1.0)))
     }
-}
-
-fn schlick(cosine: f32, ref_idx: f32) -> f32 {
-    let mut r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
-    r0 = r0 * r0;
-    r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
 }

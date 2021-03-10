@@ -1,174 +1,139 @@
 mod camera;
 mod common;
-mod hitable;
-mod hitable_list;
+mod hittable;
 mod material;
 mod ray;
-mod sphere;
 mod vec3;
 
-use std::f32::INFINITY;
+use std::fs::File;
+use std::io::BufWriter;
+use std::path::Path;
 
 use camera::Camera;
-use common::*;
-use hitable::{HitRecord, Hitable};
-use hitable_list::HitableList;
-use material::*;
+use common::{clamp, Rng};
+use hittable::{Hittable, HittableList, Object, Sphere};
+use material::{Dielectric, Lambertian, Mat, Material, Metal};
 use ray::Ray;
-use sphere::Sphere;
-use vec3::{Color, Point3, Vec3};
+use vec3::Vec3;
 
-use wasm_bindgen::prelude::*;
-
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-#[wasm_bindgen]
-pub struct Image {
-    width: u32,
-    height: u32,
-    data: Vec<u8>,
-    camera: Camera,
-    world: HitableList,
+struct Renderer {
+    pub width: usize,
+    pub height: usize,
 }
 
-#[wasm_bindgen]
-impl Image {
-    pub fn new(w: u32, h: u32) -> Image {
-        let mut world = HitableList::new();
-
-        let ground = Hitable::Sphere(Sphere::new(
-            Point3::new(0.0, -1000.0, 0.0),
-            1000.0,
-            Material::Lambertian(Lambertian::new(Color::new(0.5, 0.5, 0.5))),
-        ));
-        let sphere_1 = Hitable::Sphere(Sphere::new(
-            Point3::new(1.0, 1.0, 0.0),
-            1.0,
-            Material::Lambertian(Lambertian::new(Color::new(0.0, 0.0, 1.0))),
-        ));
-        let sphere_2 = Hitable::Sphere(Sphere::new(
-            Point3::new(2.0, 1.0, -2.0),
-            1.0,
-            Material::Metal(Metal::new(Color::new(0.8, 0.8, 0.8), 0.05)),
-        ));
-        let sphere_3 = Hitable::Sphere(Sphere::new(
-            Point3::new(0.0, 1.0, -5.0),
-            1.0,
-            Material::Lambertian(Lambertian::new(Color::new(1.0, 0.0, 0.0))),
-        ));
-        let sphere_4 = Hitable::Sphere(Sphere::new(
-            Point3::new(2.0, 1.0, 2.0),
-            1.0,
-            Material::Dielectric(Dielectric::new(2.4)),
-        ));
-        let sphere_5 = Hitable::Sphere(Sphere::new(
-            Point3::new(6.0, 0.5, 4.0),
-            0.5,
-            Material::Lambertian(Lambertian::new(Color::new(0.7, 0.0, 1.0))),
-        ));
-
-        world.add(ground);
-        world.add(sphere_1);
-        world.add(sphere_2);
-        world.add(sphere_3);
-        world.add(sphere_4);
-        world.add(sphere_5);
-
-        let lookfrom = Point3::new(-10.0, 2.0, 0.0);
-        let lookat = Point3::new(0.0, 1.0, 0.0);
-
-        let cam = Camera::new(lookfrom, lookat, 20.0, w as f32 / h as f32, 0.1, 10.0);
-
-        Image {
-            width: w,
-            height: h,
-            data: vec![0; (w * h * 4) as usize],
-            camera: cam,
-            world: world,
-        }
+impl Renderer {
+    pub fn new(width: usize, height: usize) -> Self {
+        Self { width, height }
     }
 
-    pub fn render(&mut self, samples_per_pixel: u32, max_depth: u32, mut random_seed: u32) {
-        for j in (0..self.height).rev() {
+    pub fn render(&self, n_samples: usize) {
+        let mut rng = Rng::new(1234);
+        let max_depth = 20;
+
+        // PNG
+        let path = Path::new(r"out.png");
+        let file = File::create(path).unwrap();
+        let ref mut w = BufWriter::new(file);
+
+        let mut encoder = png::Encoder::new(w, self.width as u32, self.height as u32);
+        encoder.set_color(png::ColorType::RGB);
+        encoder.set_depth(png::BitDepth::Eight);
+
+        let cam = Camera::default();
+
+        let mat_ground = Mat::from(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)));
+        let mat_center = Mat::from(Lambertian::new(Vec3::new(0.7, 0.3, 0.3)));
+        let mat_left = Mat::from(Dielectric::new(1.5));
+        let mat_right = Mat::from(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.1));
+
+        // World
+        let mut world = HittableList::new();
+        world.push(Object::from(Sphere::new(
+            Vec3::new(0.0, 0.0, -1.0),
+            0.5,
+            &mat_center,
+        )));
+        world.push(Object::from(Sphere::new(
+            Vec3::new(-1.0, 0.0, -1.0),
+            0.5,
+            &mat_left,
+        )));
+        world.push(Object::from(Sphere::new(
+            Vec3::new(-1.0, 0.0, -1.0),
+            -0.4,
+            &mat_left,
+        )));
+        world.push(Object::from(Sphere::new(
+            Vec3::new(1.0, 0.0, -1.0),
+            0.5,
+            &mat_right,
+        )));
+        world.push(Object::from(Sphere::new(
+            Vec3::new(0.0, -100.5, -1.0),
+            100.0,
+            &mat_ground,
+        )));
+
+        let mut buf: Vec<u8> = Vec::with_capacity(self.width * self.height * 3);
+        for j in 0..self.height {
             for i in 0..self.width {
-                let index = (((self.height - j - 1) * self.width + i) * 4) as usize;
+                let mut pixel_color = Vec3::zero();
+                for _n in 0..n_samples {
+                    let u = (i as f64 + rng.gen()) / ((self.width - 1) as f64);
+                    let v = (j as f64 + rng.gen()) / ((self.height - 1) as f64);
 
-                let mut pixel_color = Color::zero();
-
-                for _ in 0..samples_per_pixel {
-                    let u = (i as f32 + random_float(&mut random_seed)) / (self.width - 1) as f32;
-                    let v = (j as f32 + random_float(&mut random_seed)) / (self.height - 1) as f32;
-
-                    let r = self.camera.get_ray(u, v, &mut random_seed);
-
-                    pixel_color += ray_color(r, &self.world, &mut random_seed, max_depth);
+                    let r = cam.get_ray(u, v);
+                    pixel_color += Self::ray_color(r, &world, &mut rng, max_depth);
                 }
+                Self::write_color(&mut buf, pixel_color, n_samples);
+            }
+            println!("Done line {} of {}.", j, self.height);
+        }
 
-                self.write_color(pixel_color, index, samples_per_pixel);
+        let mut writer = encoder.write_header().unwrap();
+        writer.write_image_data(&buf).unwrap();
+    }
+
+    fn ray_color(r: Ray, world: &HittableList, rng: &mut Rng, depth: usize) -> Vec3 {
+        if depth <= 0 {
+            return Vec3::zero();
+        }
+
+        match world.hit(r, 0.001, f64::INFINITY) {
+            Some(rec) => match rec.mat {
+                Some(mat) => match mat.scatter(r, &rec, rng) {
+                    Some((r, c)) => c * Self::ray_color(r, world, rng, depth - 1),
+                    None => Vec3::zero(),
+                },
+                None => Vec3::zero(),
+            },
+            None => {
+                let t = 0.5 * (r.d.unit().y + 1.0);
+                (1.0 - t) * Vec3::splat(1.0) + t * Vec3::new(0.5, 0.7, 1.0)
             }
         }
     }
 
-    pub fn get_image_data_ptr(&self) -> *const u8 {
-        self.data.as_ptr()
-    }
+    fn write_color(buf: &mut Vec<u8>, v: Vec3, n_samples: usize) {
+        let scale = 1.0 / (n_samples as f64);
+        let r = (v.x * scale).sqrt();
+        let g = (v.y * scale).sqrt();
+        let b = (v.z * scale).sqrt();
 
-    pub fn get_image_data_len(&self) -> u32 {
-        self.width * self.height * 4
-    }
-
-    pub fn set_camera_origin(&mut self, x: f32, y: f32, z: f32) {
-        self.camera.set_origin(Vec3::new(x, y, z));
-    }
-
-    pub fn set_camera_target(&mut self, x: f32, y: f32, z: f32) {
-        self.camera.set_target(Vec3::new(x, y, z));
-    }
-
-    pub fn set_camera_focus(&mut self, d: f32) {
-        self.camera.set_focus(d);
+        buf.push((256.0 * clamp(r, 0.0, 0.9999)) as u8);
+        buf.push((256.0 * clamp(g, 0.0, 0.9999)) as u8);
+        buf.push((256.0 * clamp(b, 0.0, 0.9999)) as u8);
     }
 }
 
-impl Image {
-    fn write_color(&mut self, pixel_color: Color, index: usize, samples_per_pixel: u32) {
-        let mut r = pixel_color.x();
-        let mut g = pixel_color.y();
-        let mut b = pixel_color.z();
+#[cfg(test)]
+mod tests {
+    use crate::Renderer;
 
-        let scale = 1.0 / samples_per_pixel as f32;
-        r = (scale * r).sqrt();
-        g = (scale * g).sqrt();
-        b = (scale * b).sqrt();
-
-        self.data[index + 0] = (256.0 * clamp(r, 0.0, 0.999)) as u8;
-        self.data[index + 1] = (256.0 * clamp(g, 0.0, 0.999)) as u8;
-        self.data[index + 2] = (256.0 * clamp(b, 0.0, 0.999)) as u8;
-        self.data[index + 3] = 255;
+    #[test]
+    fn main() {
+        // 960 540 / 426 240
+        let r = Renderer::new(426, 240);
+        r.render(25);
     }
-}
-
-fn ray_color(r: Ray, world: &HitableList, seed: &mut u32, depth: u32) -> Color {
-    let mut rec: HitRecord = Default::default();
-    if depth <= 0 {
-        return Color::zero();
-    }
-
-    if world.hit(r, 0.001, INFINITY, &mut rec) {
-        let mut scattered: Ray = Default::default();
-        let mut attenuation: Color = Default::default();
-        let mut rec_copy = rec;
-        if rec
-            .material
-            .scatter(r, &mut rec_copy, &mut attenuation, &mut scattered, seed)
-        {
-            return attenuation * ray_color(scattered, world, seed, depth - 1);
-        }
-        return Color::new(0.0, 0.0, 0.0);
-    }
-    let unit_dir = Vec3::unit_vector(r.direction());
-    let t = 0.5 * (unit_dir.y() + 1.0);
-    (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)
 }

@@ -1,294 +1,138 @@
-use std::fmt;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use auto_ops::{impl_op_ex, impl_op_ex_commutative};
 
-use crate::common::{random_float, random_range};
+use crate::common::Rng;
 
-pub type Point3 = Vec3;
-pub type Color = Vec3;
-
-#[derive(Debug, PartialEq, Default, Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub struct Vec3 {
-    x: f32,
-    y: f32,
-    z: f32,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
 }
 
 impl Vec3 {
-    pub fn new(x: f32, y: f32, z: f32) -> Vec3 {
-        Vec3 { x: x, y: y, z: z }
+    pub fn new(x: f64, y: f64, z: f64) -> Self {
+        Self { x, y, z }
     }
 
-    pub fn zero() -> Vec3 {
-        Vec3 {
+    pub fn zero() -> Self {
+        Self {
             x: 0.0,
             y: 0.0,
             z: 0.0,
         }
     }
 
-    pub fn x(&self) -> f32 {
-        self.x
+    /// Creates a new Vec2 with the same value for x and y
+    pub fn splat(v: f64) -> Self {
+        Self { x: v, y: v, z: v }
     }
 
-    pub fn y(&self) -> f32 {
-        self.y
-    }
-
-    pub fn z(&self) -> f32 {
-        self.z
-    }
-
-    pub fn length(&self) -> f32 {
-        self.length_squared().sqrt()
-    }
-
-    pub fn length_squared(&self) -> f32 {
+    /// Length^2
+    #[inline(always)]
+    pub fn len_sq(&self) -> f64 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
-    #[inline]
-    pub fn dot(u: Vec3, v: Vec3) -> f32 {
+    /// Length
+    #[inline(always)]
+    pub fn len(&self) -> f64 {
+        self.len_sq().sqrt()
+    }
+
+    /// Normalize
+    #[inline(always)]
+    pub fn unit(&self) -> Self {
+        let l = 1.0 / self.len();
+        Self {
+            x: self.x * l,
+            y: self.y * l,
+            z: self.z * l,
+        }
+    }
+
+    #[inline(always)]
+    pub fn dot(u: Self, v: Self) -> f64 {
         u.x * v.x + u.y * v.y + u.z * v.z
     }
 
-    #[inline]
-    pub fn cross(u: Vec3, v: Vec3) -> Vec3 {
-        Vec3 {
+    #[inline(always)]
+    pub fn cross(u: Self, v: Self) -> Self {
+        Self {
             x: u.y * v.z - u.z * v.y,
             y: u.z * v.x - u.x * v.z,
             z: u.x * v.y - u.y * v.x,
         }
     }
 
-    #[inline]
-    pub fn unit_vector(v: Vec3) -> Vec3 {
-        let len = v.length();
-        Vec3 {
-            x: v.x() / len,
-            y: v.y() / len,
-            z: v.z() / len,
-        }
-    }
-
-    #[inline]
-    pub fn random(seed: &mut u32) -> Vec3 {
-        Vec3 {
-            x: random_float(seed),
-            y: random_float(seed),
-            z: random_float(seed),
-        }
-    }
-
-    #[inline]
-    pub fn random_range(seed: &mut u32, min: f32, max: f32) -> Vec3 {
-        Vec3 {
-            x: random_range(seed, min, max),
-            y: random_range(seed, min, max),
-            z: random_range(seed, min, max),
-        }
-    }
-
-    #[inline]
-    pub fn random_in_unit_sphere(seed: &mut u32) -> Vec3 {
-        loop {
-            let p = Vec3::random_range(seed, -1.0, 1.0);
-            if p.length_squared() < 1.0 {
-                return p;
-            }
-        }
-    }
-
-    #[inline]
-    pub fn random_unit_vector(seed: &mut u32) -> Vec3 {
-        let a = random_range(seed, 0.0, 2.0 * std::f32::consts::PI);
-        let z = random_range(seed, -1.0, 1.0);
-        let r = (1.0 - z * z).sqrt();
-        Vec3 {
-            x: r * a.cos(),
-            y: r * a.sin(),
-            z: z,
-        }
-    }
-
-    #[inline]
-    pub fn random_in_unit_disk(seed: &mut u32) -> Vec3 {
-        loop {
-            let p = Vec3::new(
-                random_range(seed, -1.0, 1.0),
-                random_range(seed, -1.0, 1.0),
-                0.0,
-            );
-            if p.length_squared() < 1.0 {
-                return p;
-            }
-        }
-    }
-
-    #[inline]
-    pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {
+    #[inline(always)]
+    pub fn reflect(v: Self, n: Self) -> Self {
         v - 2.0 * Vec3::dot(v, n) * n
     }
 
-    #[inline]
-    pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) -> Vec3 {
-        let cos_theta = Vec3::dot(-uv, n);
-        let r_out_parallel = etai_over_etat * (uv + cos_theta * n);
-        let r_out_perp = -(1.0 - r_out_parallel.length_squared()).sqrt() * n;
-        r_out_parallel + r_out_perp
+    #[inline(always)]
+    pub fn refract(v: Self, n: Self, eta: f64) -> Self {
+        let cos_theta = Vec3::dot(-v, n).min(1.0);
+        let perp = eta * (v + cos_theta * n);
+        let parallel = -((1.0 - perp.len_sq()).abs().sqrt()) * n;
+        perp + parallel
+    }
+
+    #[inline(always)]
+    pub fn near_zero(&self) -> bool {
+        const ETA: f64 = 1e-8;
+        (self.x.abs() < ETA) && (self.y.abs() < ETA) && (self.z.abs() < ETA)
     }
 }
 
-impl fmt::Display for Vec3 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {} {}", self.x, self.y, self.z)
-    }
-}
-
-impl AddAssign for Vec3 {
-    #[inline]
-    fn add_assign(&mut self, rhs: Vec3) {
-        self.x += rhs.x;
-        self.y += rhs.y;
-        self.z += rhs.z;
-    }
-}
-
-impl SubAssign for Vec3 {
-    #[inline]
-    fn sub_assign(&mut self, rhs: Vec3) {
-        self.x -= rhs.x;
-        self.y -= rhs.y;
-        self.z -= rhs.z;
-    }
-}
-
-impl MulAssign for Vec3 {
-    #[inline]
-    fn mul_assign(&mut self, rhs: Vec3) {
-        self.x *= rhs.x;
-        self.y *= rhs.y;
-        self.z *= rhs.z;
-    }
-}
-
-impl DivAssign for Vec3 {
-    #[inline]
-    fn div_assign(&mut self, rhs: Vec3) {
-        self.x /= rhs.x;
-        self.y /= rhs.y;
-        self.z /= rhs.z;
-    }
-}
-
-impl Add for Vec3 {
-    type Output = Vec3;
-
-    #[inline]
-    fn add(self, rhs: Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-            z: self.z + rhs.z,
+impl Vec3 {
+    #[inline(always)]
+    pub fn random(rng: &mut Rng) -> Self {
+        Self {
+            x: rng.range(-1.0, 1.0),
+            y: rng.range(-1.0, 1.0),
+            z: rng.range(-1.0, 1.0),
         }
     }
-}
 
-impl Add<f32> for Vec3 {
-    type Output = Vec3;
-
-    #[inline]
-    fn add(self, rhs: f32) -> Vec3 {
-        Vec3 {
-            x: self.x + rhs,
-            y: self.y + rhs,
-            z: self.z + rhs,
-        }
+    #[inline(always)]
+    pub fn random_unit(rng: &mut Rng) -> Self {
+        Self::random(rng).unit()
     }
 }
 
-impl Sub for Vec3 {
-    type Output = Vec3;
+// Add
+impl_op_ex!(+|a: &Vec3, b: &Vec3| -> Vec3 { Vec3::new(a.x + b.x, a.y + b.y, a.z + b.z) });
+impl_op_ex_commutative!(+|a: &Vec3, b: &f64| -> Vec3 { Vec3::new(a.x + b, a.y + b, a.z + b) });
 
-    #[inline]
-    fn sub(self, rhs: Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-            z: self.z - rhs.z,
-        }
-    }
-}
+// Assign Add
+impl_op_ex!(+=|a: &mut Vec3, b: &Vec3| { a.x += b.x; a.y += b.y; a.z += b.z });
+impl_op_ex!(+=|a: &mut Vec3, b: &f64| { a.x += b; a.y += b; a.z += b });
 
-impl Mul for Vec3 {
-    type Output = Vec3;
+// Sub
+impl_op_ex!(-|a: &Vec3, b: &Vec3| -> Vec3 { Vec3::new(a.x - b.x, a.y - b.y, a.z - b.z) });
+impl_op_ex!(-|a: &Vec3, b: &f64| -> Vec3 { Vec3::new(a.x - b, a.y - b, a.z - b) });
+impl_op_ex!(-|a: &f64, b: &Vec3| -> Vec3 { Vec3::new(a - b.x, a - b.y, a - b.z) });
 
-    #[inline]
-    fn mul(self, rhs: Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x * rhs.x,
-            y: self.y * rhs.y,
-            z: self.z * rhs.z,
-        }
-    }
-}
+// Assign Sub
+impl_op_ex!(-=|a: &mut Vec3, b: &Vec3| { a.x -= b.x; a.y -= b.y; a.z -= b.z });
+impl_op_ex!(-=|a: &mut Vec3, b: &f64| { a.x -= b; a.y -= b; a.z -= b });
 
-impl Mul<f32> for Vec3 {
-    type Output = Vec3;
+// Mul
+impl_op_ex!(*|a: &Vec3, b: &Vec3| -> Vec3 { Vec3::new(a.x * b.x, a.y * b.y, a.z * b.z) });
+impl_op_ex_commutative!(*|a: &Vec3, b: &f64| -> Vec3 { Vec3::new(a.x * b, a.y * b, a.z * b) });
 
-    #[inline]
-    fn mul(self, rhs: f32) -> Vec3 {
-        Vec3 {
-            x: self.x * rhs,
-            y: self.y * rhs,
-            z: self.z * rhs,
-        }
-    }
-}
+// Assign Mul
+impl_op_ex!(*=|a: &mut Vec3, b: &Vec3| { a.x *= b.x; a.y *= b.y; a.z *= b.z });
+impl_op_ex!(*=|a: &mut Vec3, b: &f64| { a.x *= b; a.y *= b; a.z *= b });
 
-impl Mul<Vec3> for f32 {
-    type Output = Vec3;
+// Div
+impl_op_ex!(/|a: &Vec3, b: &Vec3| -> Vec3 { Vec3::new(a.x / b.x, a.y / b.y, a.z / b.z) });
+impl_op_ex!(/|a: &Vec3, b: &f64| -> Vec3 { Vec3::new(a.x / b, a.y / b, a.z / b) });
+impl_op_ex!(/|a: &f64, b: &Vec3| -> Vec3 { Vec3::new(a / b.x, a / b.y, a / b.z) });
 
-    #[inline]
-    fn mul(self, rhs: Vec3) -> Vec3 {
-        Vec3 {
-            x: self * rhs.x,
-            y: self * rhs.y,
-            z: self * rhs.z,
-        }
-    }
-}
+// Assign Div
+impl_op_ex!(/=|a: &mut Vec3, b: &Vec3| { a.x /= b.x; a.y /= b.y; a.z /= b.z });
+impl_op_ex!(/=|a: &mut Vec3, b: &f64| { a.x /= b; a.y /= b; a.z /= b });
 
-impl Div for Vec3 {
-    type Output = Vec3;
-
-    #[inline]
-    fn div(self, rhs: Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x / rhs.x,
-            y: self.y / rhs.y,
-            z: self.z / rhs.z,
-        }
-    }
-}
-
-impl Div<f32> for Vec3 {
-    type Output = Vec3;
-
-    #[inline]
-    fn div(self, rhs: f32) -> Vec3 {
-        (1.0 / rhs) * self
-    }
-}
-
-impl Neg for Vec3 {
-    type Output = Vec3;
-
-    #[inline]
-    fn neg(self) -> Vec3 {
-        Vec3 {
-            x: -self.x,
-            y: -self.y,
-            z: -self.z,
-        }
-    }
-}
+// Uniary Neg
+impl_op_ex!(-|a: Vec3| -> Vec3 { Vec3::new(-a.x, -a.y, -a.z) });
