@@ -95,8 +95,18 @@ impl Vec3 {
     }
 
     #[inline(always)]
-    pub fn random_unit(rng: &mut Rng) -> Self {
+    pub fn random_unit_sphere(rng: &mut Rng) -> Self {
         Self::random(rng).unit()
+    }
+
+    pub fn random_unit_disk(rng: &mut Rng) -> Self {
+        loop {
+            let p = Vec3::new(rng.range(-1.0, 1.0), rng.range(-1.0, 1.0), 0.0);
+            if p.len_sq() >= 1.0 {
+                continue;
+            }
+            return p;
+        }
     }
 }
 

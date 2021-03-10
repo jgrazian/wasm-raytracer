@@ -39,12 +39,21 @@ impl Renderer {
         encoder.set_color(png::ColorType::RGB);
         encoder.set_depth(png::BitDepth::Eight);
 
-        let cam = Camera::default();
+        let look_from = Vec3::new(3.0, 3.0, 2.0);
+        let look_at = Vec3::new(0.0, 0.0, -1.0);
+        let cam = Camera::new(
+            look_from,
+            look_at,
+            20.0,
+            self.width as f64 / self.height as f64,
+            0.01,
+            (look_from - look_at).len(),
+        );
 
         let mat_ground = Mat::from(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)));
-        let mat_center = Mat::from(Lambertian::new(Vec3::new(0.7, 0.3, 0.3)));
+        let mat_center = Mat::from(Lambertian::new(Vec3::new(0.1, 0.2, 0.5)));
         let mat_left = Mat::from(Dielectric::new(1.5));
-        let mat_right = Mat::from(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.1));
+        let mat_right = Mat::from(Metal::new(Vec3::new(0.8, 0.6, 0.2), 0.05));
 
         // World
         let mut world = HittableList::new();
@@ -82,7 +91,7 @@ impl Renderer {
                     let u = (i as f64 + rng.gen()) / ((self.width - 1) as f64);
                     let v = (j as f64 + rng.gen()) / ((self.height - 1) as f64);
 
-                    let r = cam.get_ray(u, v);
+                    let r = cam.get_ray(u, v, &mut rng);
                     pixel_color += Self::ray_color(r, &world, &mut rng, max_depth);
                 }
                 Self::write_color(&mut buf, pixel_color, n_samples);
@@ -134,6 +143,6 @@ mod tests {
     fn main() {
         // 960 540 / 426 240
         let r = Renderer::new(426, 240);
-        r.render(25);
+        r.render(10);
     }
 }
