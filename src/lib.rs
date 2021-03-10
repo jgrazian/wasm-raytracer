@@ -8,7 +8,10 @@ mod vec3;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
-use std::rc::Rc;
+use std::sync::Arc;
+
+use indicatif::{ParallelProgressIterator, ProgressBar};
+use rayon::prelude::*;
 
 use camera::Camera;
 use common::{clamp, Rng};
@@ -35,10 +38,19 @@ impl Renderer {
         let path = Path::new(r"out.png");
         let file = File::create(path).unwrap();
         let ref mut w = BufWriter::new(file);
-
         let mut encoder = png::Encoder::new(w, self.width as u32, self.height as u32);
         encoder.set_color(png::ColorType::RGB);
         encoder.set_depth(png::BitDepth::Eight);
+
+        let prog_bar = ProgressBar::new(self.height as u64);
+        prog_bar.set_style(
+            indicatif::ProgressStyle::default_bar()
+                .template(
+                    "  {msg:.bright.cyan} [{bar:50}] {pos:>4}/{len:4} {elapsed:>3} Eta: {eta_precise}",
+                )
+                .progress_chars("=> "),
+        );
+        prog_bar.set_message("Rendering");
 
         let look_from = Vec3::new(13.0, 2.0, 3.0);
         let look_at = Vec3::new(0.0, 0.0, 0.0);
@@ -54,24 +66,30 @@ impl Renderer {
         // World
         let world = random_scene(&mut rng);
 
-        let mut buf: Vec<u8> = Vec::with_capacity(self.width * self.height * 3);
-        for j in 0..self.height {
-            for i in 0..self.width {
-                let mut pixel_color = Vec3::zero();
-                for _n in 0..n_samples {
-                    let u = (i as f64 + rng.gen()) / ((self.width - 1) as f64);
-                    let v = (j as f64 + rng.gen()) / ((self.height - 1) as f64);
+        let img_buf: Vec<u8> = (0..self.height)
+            .into_par_iter()
+            .progress_with(prog_bar)
+            .map(|j| {
+                let mut row_buf: Vec<u8> = Vec::with_capacity(self.width * 3);
+                let mut rng = Rng::new(123 + j as u32);
+                for i in 0..self.width {
+                    let mut pixel_color = Vec3::zero();
+                    for _n in 0..n_samples {
+                        let u = (i as f64 + rng.gen()) / ((self.width - 1) as f64);
+                        let v = (j as f64 + rng.gen()) / ((self.height - 1) as f64);
 
-                    let r = cam.get_ray(u, v, &mut rng);
-                    pixel_color += Self::ray_color(r, &world, &mut rng, max_depth);
+                        let r = cam.get_ray(u, v, &mut rng);
+                        pixel_color += Self::ray_color(r, &world, &mut rng, max_depth);
+                    }
+                    Self::write_color(&mut row_buf, pixel_color, n_samples);
                 }
-                Self::write_color(&mut buf, pixel_color, n_samples);
-            }
-            println!("Done line {} of {}.", j, self.height);
-        }
+                row_buf
+            })
+            .flatten()
+            .collect();
 
         let mut writer = encoder.write_header().unwrap();
-        writer.write_image_data(&buf).unwrap();
+        writer.write_image_data(&img_buf).unwrap();
     }
 
     fn ray_color(r: Ray, world: &HittableList, rng: &mut Rng, depth: usize) -> Vec3 {
@@ -109,12 +127,12 @@ impl Renderer {
 fn random_scene(rng: &mut Rng) -> HittableList {
     let mut world = HittableList::new();
 
-    let ground_mat = Rc::new(Material::from(Lambertian::new(Vec3::new(0.5, 0.5, 0.5))));
+    let ground_mat = Arc::new(Material::from(Lambertian::new(Vec3::new(0.5, 0.5, 0.5))));
 
     world.push(Object::from(Sphere::new(
         Vec3::new(0.0, -1000.0, 0.0),
         1000.0,
-        Rc::clone(&ground_mat),
+        Arc::clone(&ground_mat),
     )));
 
     for a in -11..11 {
@@ -127,39 +145,39 @@ fn random_scene(rng: &mut Rng) -> HittableList {
 
                 if choose_mat < 0.8 {
                     let albedo = Vec3::random(rng) * Vec3::random(rng);
-                    mat = Rc::new(Material::from(Lambertian::new(albedo)));
+                    mat = Arc::new(Material::from(Lambertian::new(albedo)));
                 } else if choose_mat < 0.95 {
                     let albedo = Vec3::random_range(rng, 0.5, 1.0);
                     let fuzz = rng.range(0.0, 0.5);
-                    mat = Rc::new(Material::from(Metal::new(albedo, fuzz)));
+                    mat = Arc::new(Material::from(Metal::new(albedo, fuzz)));
                 } else {
-                    mat = Rc::new(Material::from(Dielectric::new(1.5)));
+                    mat = Arc::new(Material::from(Dielectric::new(1.5)));
                 }
 
-                world.push(Object::from(Sphere::new(center, 0.2, Rc::clone(&mat))));
+                world.push(Object::from(Sphere::new(center, 0.2, Arc::clone(&mat))));
             }
         }
     }
 
-    let mat_1 = Rc::new(Material::from(Dielectric::new(1.5)));
+    let mat_1 = Arc::new(Material::from(Dielectric::new(1.5)));
     world.push(Object::from(Sphere::new(
         Vec3::new(0.0, 1.0, 0.0),
         1.0,
-        Rc::clone(&mat_1),
+        Arc::clone(&mat_1),
     )));
 
-    let mat_2 = Rc::new(Material::from(Lambertian::new(Vec3::new(0.4, 0.2, 0.1))));
+    let mat_2 = Arc::new(Material::from(Lambertian::new(Vec3::new(0.4, 0.2, 0.1))));
     world.push(Object::from(Sphere::new(
         Vec3::new(-4.0, 1.0, 0.0),
         1.0,
-        Rc::clone(&mat_2),
+        Arc::clone(&mat_2),
     )));
 
-    let mat_3 = Rc::new(Material::from(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0)));
+    let mat_3 = Arc::new(Material::from(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0)));
     world.push(Object::from(Sphere::new(
         Vec3::new(4.0, 1.0, 0.0),
         1.0,
-        Rc::clone(&mat_3),
+        Arc::clone(&mat_3),
     )));
 
     world
@@ -173,6 +191,6 @@ mod tests {
     fn main() {
         // 960 540 / 426 240
         let r = Renderer::new(1200, 800);
-        r.render(500);
+        r.render(5);
     }
 }

@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use enum_dispatch::enum_dispatch;
 
@@ -56,12 +56,12 @@ pub struct HitRec {
     pub p: Vec3,
     pub n: Vec3,
     pub t: f64,
-    pub mat: Option<Rc<Material>>,
+    pub mat: Option<Arc<Material>>,
     pub front_face: bool,
 }
 
 impl HitRec {
-    fn new(p: Vec3, n: Vec3, t: f64, mat: Option<Rc<Material>>) -> Self {
+    fn new(p: Vec3, n: Vec3, t: f64, mat: Option<Arc<Material>>) -> Self {
         Self {
             p,
             n,
@@ -85,11 +85,11 @@ impl HitRec {
 pub struct Sphere {
     pub c: Vec3,
     pub r: f64,
-    pub mat: Rc<Material>,
+    pub mat: Arc<Material>,
 }
 
 impl Sphere {
-    pub fn new(c: Vec3, r: f64, mat: Rc<Material>) -> Self {
+    pub fn new(c: Vec3, r: f64, mat: Arc<Material>) -> Self {
         Self { c, r, mat }
     }
 }
@@ -120,7 +120,7 @@ impl Hittable for Sphere {
         let p = r.at(root);
         let n = (p - self.c) / self.r;
 
-        let mut rec = HitRec::new(p, n, t, Some(Rc::clone(&self.mat)));
+        let mut rec = HitRec::new(p, n, t, Some(Arc::clone(&self.mat)));
         rec.set_face_normal(r, n);
         Some(rec)
     }
