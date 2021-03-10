@@ -6,13 +6,13 @@ use crate::ray::Ray;
 use crate::vec3::Vec3;
 
 #[enum_dispatch]
-pub trait Material {
+pub trait MaterialTrait {
     fn scatter(&self, r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)>;
 }
 
-#[enum_dispatch(Material)]
+#[enum_dispatch(MaterialTrait)]
 #[derive(Clone, Debug)]
-pub enum Mat {
+pub enum Material {
     Lambertian,
     Metal,
     Dielectric,
@@ -29,7 +29,7 @@ impl Lambertian {
     }
 }
 
-impl Material for Lambertian {
+impl MaterialTrait for Lambertian {
     #[inline(always)]
     fn scatter(&self, _r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
         let mut scatter_dir = rec.n + Vec3::random_unit_sphere(rng);
@@ -54,7 +54,7 @@ impl Metal {
     }
 }
 
-impl Material for Metal {
+impl MaterialTrait for Metal {
     #[inline(always)]
     fn scatter(&self, r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
         let reflected = Vec3::reflect(r_in.d.unit(), rec.n);
@@ -87,7 +87,7 @@ impl Dielectric {
     }
 }
 
-impl Material for Dielectric {
+impl MaterialTrait for Dielectric {
     #[inline(always)]
     fn scatter(&self, r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
         let refraction_ratio = if rec.front_face {

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use enum_dispatch::enum_dispatch;
 
-use crate::material::Mat;
+use crate::material::Material;
 use crate::ray::Ray;
 use crate::vec3::Vec3;
 
@@ -11,43 +11,28 @@ pub trait Hittable {
     fn hit(&self, r: Ray, t_min: f64, t_max: f64) -> Option<HitRec>;
 }
 
-//#[enum_dispatch(Hittable)]
-pub enum Object<'a> {
-    Sphere(Sphere<'a>),
+#[enum_dispatch(Hittable)]
+pub enum Object {
+    Sphere,
 }
 
-impl Hittable for Object<'_> {
-    #[inline(always)]
-    fn hit(&self, r: Ray, t_min: f64, t_max: f64) -> Option<HitRec> {
-        match self {
-            Object::Sphere(s) => s.hit(r, t_min, t_max),
-        }
-    }
+pub struct HittableList {
+    objects: Vec<Object>,
 }
 
-impl<'a> From<Sphere<'a>> for Object<'a> {
-    fn from(sphere: Sphere<'a>) -> Self {
-        Object::Sphere(sphere)
-    }
-}
-
-pub struct HittableList<'a> {
-    objects: Vec<Object<'a>>,
-}
-
-impl<'a> HittableList<'a> {
+impl HittableList {
     pub fn new() -> Self {
         Self {
-            objects: Vec::with_capacity(16),
+            objects: Vec::with_capacity(32),
         }
     }
 
-    pub fn push(&mut self, obj: Object<'a>) {
+    pub fn push(&mut self, obj: Object) {
         self.objects.push(obj);
     }
 }
 
-impl Hittable for HittableList<'_> {
+impl Hittable for HittableList {
     #[inline(always)]
     fn hit(&self, r: Ray, t_min: f64, t_max: f64) -> Option<HitRec> {
         let mut rec: Option<HitRec> = None;
@@ -67,16 +52,16 @@ impl Hittable for HittableList<'_> {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct HitRec<'mat> {
+pub struct HitRec {
     pub p: Vec3,
     pub n: Vec3,
     pub t: f64,
-    pub mat: Option<&'mat Mat>,
+    pub mat: Option<Rc<Material>>,
     pub front_face: bool,
 }
 
-impl<'a> HitRec<'a> {
-    fn new(p: Vec3, n: Vec3, t: f64, mat: Option<&'a Mat>) -> Self {
+impl HitRec {
+    fn new(p: Vec3, n: Vec3, t: f64, mat: Option<Rc<Material>>) -> Self {
         Self {
             p,
             n,
@@ -97,19 +82,19 @@ impl<'a> HitRec<'a> {
 }
 
 #[derive(Clone, Debug)]
-pub struct Sphere<'mat> {
+pub struct Sphere {
     pub c: Vec3,
     pub r: f64,
-    pub mat: &'mat Mat,
+    pub mat: Rc<Material>,
 }
 
-impl<'a> Sphere<'a> {
-    pub fn new(c: Vec3, r: f64, mat: &'a Mat) -> Self {
+impl Sphere {
+    pub fn new(c: Vec3, r: f64, mat: Rc<Material>) -> Self {
         Self { c, r, mat }
     }
 }
 
-impl<'a> Hittable for Sphere<'a> {
+impl Hittable for Sphere {
     #[inline(always)]
     fn hit(&self, r: Ray, t_min: f64, t_max: f64) -> Option<HitRec> {
         let oc = r.o - self.c;
@@ -135,7 +120,7 @@ impl<'a> Hittable for Sphere<'a> {
         let p = r.at(root);
         let n = (p - self.c) / self.r;
 
-        let mut rec = HitRec::new(p, n, t, Some(self.mat));
+        let mut rec = HitRec::new(p, n, t, Some(Rc::clone(&self.mat)));
         rec.set_face_normal(r, n);
         Some(rec)
     }

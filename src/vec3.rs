@@ -95,10 +95,20 @@ impl Vec3 {
     }
 
     #[inline(always)]
+    pub fn random_range(rng: &mut Rng, min: f64, max: f64) -> Self {
+        Self {
+            x: rng.range(min, max),
+            y: rng.range(min, max),
+            z: rng.range(min, max),
+        }
+    }
+
+    #[inline(always)]
     pub fn random_unit_sphere(rng: &mut Rng) -> Self {
         Self::random(rng).unit()
     }
 
+    #[inline(always)]
     pub fn random_unit_disk(rng: &mut Rng) -> Self {
         loop {
             let p = Vec3::new(rng.range(-1.0, 1.0), rng.range(-1.0, 1.0), 0.0);
