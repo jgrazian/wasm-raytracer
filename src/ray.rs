@@ -7,10 +7,6 @@ pub struct Ray {
 }
 
 impl Ray {
-    pub fn new(o: Vec3, d: Vec3) -> Self {
-        Self { o, d }
-    }
-
     #[inline(always)]
     pub fn at(&self, t: f64) -> Vec3 {
         self.o + t * self.d

@@ -10,10 +10,6 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
-    pub fn new(x: f64, y: f64, z: f64) -> Self {
-        Self { x, y, z }
-    }
-
     pub fn zero() -> Self {
         Self {
             x: 0.0,
@@ -111,7 +107,11 @@ impl Vec3 {
     #[inline(always)]
     pub fn random_unit_disk(rng: &mut Rng) -> Self {
         loop {
-            let p = Vec3::new(rng.range(-1.0, 1.0), rng.range(-1.0, 1.0), 0.0);
+            let p = Vec3 {
+                x: rng.range(-1.0, 1.0),
+                y: rng.range(-1.0, 1.0),
+                z: 0.0,
+            };
             if p.len_sq() >= 1.0 {
                 continue;
             }
@@ -121,38 +121,74 @@ impl Vec3 {
 }
 
 // Add
-impl_op_ex!(+|a: &Vec3, b: &Vec3| -> Vec3 { Vec3::new(a.x + b.x, a.y + b.y, a.z + b.z) });
-impl_op_ex_commutative!(+|a: &Vec3, b: &f64| -> Vec3 { Vec3::new(a.x + b, a.y + b, a.z + b) });
+impl_op_ex!(+|a: &Vec3, b: &Vec3| -> Vec3 { Vec3{x: a.x + b.x, y: a.y + b.y, z: a.z + b.z} });
+impl_op_ex_commutative!(+|a: &Vec3, b: &f64| -> Vec3 { Vec3{x: a.x + b, y: a.y + b, z: a.z + b} });
 
 // Assign Add
 impl_op_ex!(+=|a: &mut Vec3, b: &Vec3| { a.x += b.x; a.y += b.y; a.z += b.z });
 impl_op_ex!(+=|a: &mut Vec3, b: &f64| { a.x += b; a.y += b; a.z += b });
 
 // Sub
-impl_op_ex!(-|a: &Vec3, b: &Vec3| -> Vec3 { Vec3::new(a.x - b.x, a.y - b.y, a.z - b.z) });
-impl_op_ex!(-|a: &Vec3, b: &f64| -> Vec3 { Vec3::new(a.x - b, a.y - b, a.z - b) });
-impl_op_ex!(-|a: &f64, b: &Vec3| -> Vec3 { Vec3::new(a - b.x, a - b.y, a - b.z) });
+impl_op_ex!(-|a: &Vec3, b: &Vec3| -> Vec3 {
+    Vec3 {
+        x: a.x - b.x,
+        y: a.y - b.y,
+        z: a.z - b.z,
+    }
+});
+impl_op_ex!(-|a: &Vec3, b: &f64| -> Vec3 {
+    Vec3 {
+        x: a.x - b,
+        y: a.y - b,
+        z: a.z - b,
+    }
+});
+impl_op_ex!(-|a: &f64, b: &Vec3| -> Vec3 {
+    Vec3 {
+        x: a - b.x,
+        y: a - b.y,
+        z: a - b.z,
+    }
+});
 
 // Assign Sub
 impl_op_ex!(-=|a: &mut Vec3, b: &Vec3| { a.x -= b.x; a.y -= b.y; a.z -= b.z });
 impl_op_ex!(-=|a: &mut Vec3, b: &f64| { a.x -= b; a.y -= b; a.z -= b });
 
 // Mul
-impl_op_ex!(*|a: &Vec3, b: &Vec3| -> Vec3 { Vec3::new(a.x * b.x, a.y * b.y, a.z * b.z) });
-impl_op_ex_commutative!(*|a: &Vec3, b: &f64| -> Vec3 { Vec3::new(a.x * b, a.y * b, a.z * b) });
+impl_op_ex!(*|a: &Vec3, b: &Vec3| -> Vec3 {
+    Vec3 {
+        x: a.x * b.x,
+        y: a.y * b.y,
+        z: a.z * b.z,
+    }
+});
+impl_op_ex_commutative!(*|a: &Vec3, b: &f64| -> Vec3 {
+    Vec3 {
+        x: a.x * b,
+        y: a.y * b,
+        z: a.z * b,
+    }
+});
 
 // Assign Mul
 impl_op_ex!(*=|a: &mut Vec3, b: &Vec3| { a.x *= b.x; a.y *= b.y; a.z *= b.z });
 impl_op_ex!(*=|a: &mut Vec3, b: &f64| { a.x *= b; a.y *= b; a.z *= b });
 
 // Div
-impl_op_ex!(/|a: &Vec3, b: &Vec3| -> Vec3 { Vec3::new(a.x / b.x, a.y / b.y, a.z / b.z) });
-impl_op_ex!(/|a: &Vec3, b: &f64| -> Vec3 { Vec3::new(a.x / b, a.y / b, a.z / b) });
-impl_op_ex!(/|a: &f64, b: &Vec3| -> Vec3 { Vec3::new(a / b.x, a / b.y, a / b.z) });
+impl_op_ex!(/|a: &Vec3, b: &Vec3| -> Vec3 { Vec3{x: a.x / b.x, y: a.y / b.y, z: a.z / b.z} });
+impl_op_ex!(/|a: &Vec3, b: &f64| -> Vec3 { Vec3{x: a.x / b, y: a.y / b, z: a.z / b} });
+impl_op_ex!(/|a: &f64, b: &Vec3| -> Vec3 { Vec3{x: a / b.x, y: a / b.y, z: a / b.z} });
 
 // Assign Div
 impl_op_ex!(/=|a: &mut Vec3, b: &Vec3| { a.x /= b.x; a.y /= b.y; a.z /= b.z });
 impl_op_ex!(/=|a: &mut Vec3, b: &f64| { a.x /= b; a.y /= b; a.z /= b });
 
 // Uniary Neg
-impl_op_ex!(-|a: Vec3| -> Vec3 { Vec3::new(-a.x, -a.y, -a.z) });
+impl_op_ex!(-|a: Vec3| -> Vec3 {
+    Vec3 {
+        x: -a.x,
+        y: -a.y,
+        z: -a.z,
+    }
+});

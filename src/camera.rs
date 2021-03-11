@@ -22,7 +22,15 @@ impl Camera {
         let viewport_width = ar * viewport_height;
 
         let w = (from - at).unit();
-        let u = Vec3::cross(Vec3::new(0.0, 1.0, 0.0), w).unit();
+        let u = Vec3::cross(
+            Vec3 {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            },
+            w,
+        )
+        .unit();
         let v = Vec3::cross(w, u);
 
         let origin = from;
@@ -46,10 +54,10 @@ impl Camera {
         let rd = self.lens_radius * Vec3::random_unit_disk(rng);
         let offset = self.u * rd.x + self.v * rd.y;
 
-        Ray::new(
-            self.origin + offset,
-            self.top_right + (s * self.horizontal) - (t * self.vertical) - self.origin - offset,
-        )
+        Ray {
+            o: self.origin + offset,
+            d: self.top_right + (s * self.horizontal) - (t * self.vertical) - self.origin - offset,
+        }
     }
 }
 
@@ -57,7 +65,11 @@ impl Default for Camera {
     fn default() -> Self {
         Self::new(
             Vec3::zero(),
-            Vec3::new(0.0, 0.0, -1.0),
+            Vec3 {
+                x: 0.0,
+                y: 0.0,
+                z: -1.0,
+            },
             90.0,
             16.0 / 9.0,
             0.1,

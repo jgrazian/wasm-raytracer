@@ -23,12 +23,6 @@ pub struct Lambertian {
     pub albedo: Vec3,
 }
 
-impl Lambertian {
-    pub fn new(albedo: Vec3) -> Self {
-        Self { albedo }
-    }
-}
-
 impl MaterialTrait for Lambertian {
     #[inline(always)]
     fn scatter(&self, _r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
@@ -38,7 +32,13 @@ impl MaterialTrait for Lambertian {
             scatter_dir = rec.n;
         }
 
-        Some((Ray::new(rec.p, scatter_dir), self.albedo))
+        Some((
+            Ray {
+                o: rec.p,
+                d: scatter_dir,
+            },
+            self.albedo,
+        ))
     }
 }
 
@@ -48,18 +48,15 @@ pub struct Metal {
     pub fuzz: f64,
 }
 
-impl Metal {
-    pub fn new(albedo: Vec3, fuzz: f64) -> Self {
-        Self { albedo, fuzz }
-    }
-}
-
 impl MaterialTrait for Metal {
     #[inline(always)]
     fn scatter(&self, r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
         let reflected = Vec3::reflect(r_in.d.unit(), rec.n);
 
-        let scattered = Ray::new(rec.p, reflected + self.fuzz * Vec3::random_unit_sphere(rng));
+        let scattered = Ray {
+            o: rec.p,
+            d: reflected + self.fuzz * Vec3::random_unit_sphere(rng),
+        };
 
         return if Vec3::dot(scattered.d, rec.n) > 0.0 {
             Some((scattered, self.albedo))
@@ -75,10 +72,6 @@ pub struct Dielectric {
 }
 
 impl Dielectric {
-    pub fn new(ir: f64) -> Self {
-        Self { ir }
-    }
-
     #[inline(always)]
     fn reflectance(cosine: f64, ref_idx: f64) -> f64 {
         let mut r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
@@ -108,6 +101,6 @@ impl MaterialTrait for Dielectric {
             Vec3::refract(unit_dir, rec.n, refraction_ratio)
         };
 
-        Some((Ray::new(rec.p, dir), Vec3::splat(1.0)))
+        Some((Ray { o: rec.p, d: dir }, Vec3::splat(1.0)))
     }
 }

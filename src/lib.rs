@@ -20,16 +20,13 @@ use material::{Dielectric, Lambertian, Material, MaterialTrait, Metal};
 use ray::Ray;
 use vec3::Vec3;
 
+/// Holds info about an image. Handles rendering.
 struct Renderer {
     pub width: usize,
     pub height: usize,
 }
 
 impl Renderer {
-    pub fn new(width: usize, height: usize) -> Self {
-        Self { width, height }
-    }
-
     pub fn render(&self, n_samples: usize) {
         let mut rng = Rng::new(1232);
         let max_depth = 50;
@@ -46,14 +43,22 @@ impl Renderer {
         prog_bar.set_style(
             indicatif::ProgressStyle::default_bar()
                 .template(
-                    "  {msg:.bright.cyan} [{bar:50}] {pos:>4}/{len:4} {elapsed:>3} Eta: {eta_precise}",
+                    "  {msg:.bright.cyan} [{bar:25}] {pos:>4}/{len:4} {elapsed_precise} Eta: {eta_precise}",
                 )
                 .progress_chars("=> "),
         );
         prog_bar.set_message("Rendering");
 
-        let look_from = Vec3::new(13.0, 2.0, 3.0);
-        let look_at = Vec3::new(0.0, 0.0, 0.0);
+        let look_from = Vec3 {
+            x: 13.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        let look_at = Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        };
         let cam = Camera::new(
             look_from,
             look_at,
@@ -107,7 +112,12 @@ impl Renderer {
             },
             None => {
                 let t = 0.5 * (r.d.unit().y + 1.0);
-                (1.0 - t) * Vec3::splat(1.0) + t * Vec3::new(0.5, 0.7, 1.0)
+                (1.0 - t) * Vec3::splat(1.0)
+                    + t * Vec3 {
+                        x: 0.5,
+                        y: 0.7,
+                        z: 1.0,
+                    }
             }
         }
     }
@@ -127,10 +137,20 @@ impl Renderer {
 fn random_scene(rng: &mut Rng) -> HittableList {
     let mut world = HittableList::new();
 
-    let ground_mat = Arc::new(Material::from(Lambertian::new(Vec3::new(0.5, 0.5, 0.5))));
+    let ground_mat = Arc::new(Material::from(Lambertian {
+        albedo: Vec3 {
+            x: 0.5,
+            y: 0.5,
+            z: 0.5,
+        },
+    }));
 
     world.push(Object::from(Sphere::new(
-        Vec3::new(0.0, -1000.0, 0.0),
+        Vec3 {
+            x: 0.0,
+            y: -1000.0,
+            z: 0.0,
+        },
         1000.0,
         Arc::clone(&ground_mat),
     )));
@@ -138,20 +158,32 @@ fn random_scene(rng: &mut Rng) -> HittableList {
     for a in -11..11 {
         for b in -11..11 {
             let choose_mat = rng.gen();
-            let center = Vec3::new(a as f64 + 0.9 * rng.gen(), 0.2, b as f64 + 0.9 * rng.gen());
+            let center = Vec3 {
+                x: a as f64 + 0.9 * rng.gen(),
+                y: 0.2,
+                z: b as f64 + 0.9 * rng.gen(),
+            };
 
-            if (center - Vec3::new(4.0, 0.2, 0.0)).len() > 0.9 {
+            if (center
+                - Vec3 {
+                    x: 4.0,
+                    y: 0.2,
+                    z: 0.0,
+                })
+            .len()
+                > 0.9
+            {
                 let mat;
 
                 if choose_mat < 0.8 {
                     let albedo = Vec3::random(rng) * Vec3::random(rng);
-                    mat = Arc::new(Material::from(Lambertian::new(albedo)));
+                    mat = Arc::new(Material::from(Lambertian { albedo }));
                 } else if choose_mat < 0.95 {
                     let albedo = Vec3::random_range(rng, 0.5, 1.0);
                     let fuzz = rng.range(0.0, 0.5);
-                    mat = Arc::new(Material::from(Metal::new(albedo, fuzz)));
+                    mat = Arc::new(Material::from(Metal { albedo, fuzz }));
                 } else {
-                    mat = Arc::new(Material::from(Dielectric::new(1.5)));
+                    mat = Arc::new(Material::from(Dielectric { ir: 1.5 }));
                 }
 
                 world.push(Object::from(Sphere::new(center, 0.2, Arc::clone(&mat))));
@@ -159,23 +191,48 @@ fn random_scene(rng: &mut Rng) -> HittableList {
         }
     }
 
-    let mat_1 = Arc::new(Material::from(Dielectric::new(1.5)));
+    let mat_1 = Arc::new(Material::from(Dielectric { ir: 1.5 }));
     world.push(Object::from(Sphere::new(
-        Vec3::new(0.0, 1.0, 0.0),
+        Vec3 {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        },
         1.0,
         Arc::clone(&mat_1),
     )));
 
-    let mat_2 = Arc::new(Material::from(Lambertian::new(Vec3::new(0.4, 0.2, 0.1))));
+    let mat_2 = Arc::new(Material::from(Lambertian {
+        albedo: Vec3 {
+            x: 0.4,
+            y: 0.2,
+            z: 0.1,
+        },
+    }));
     world.push(Object::from(Sphere::new(
-        Vec3::new(-4.0, 1.0, 0.0),
+        Vec3 {
+            x: -4.0,
+            y: 1.0,
+            z: 0.0,
+        },
         1.0,
         Arc::clone(&mat_2),
     )));
 
-    let mat_3 = Arc::new(Material::from(Metal::new(Vec3::new(0.7, 0.6, 0.5), 0.0)));
+    let mat_3 = Arc::new(Material::from(Metal {
+        albedo: Vec3 {
+            x: 0.7,
+            y: 0.6,
+            z: 0.5,
+        },
+        fuzz: 0.0,
+    }));
     world.push(Object::from(Sphere::new(
-        Vec3::new(4.0, 1.0, 0.0),
+        Vec3 {
+            x: 4.0,
+            y: 1.0,
+            z: 0.0,
+        },
         1.0,
         Arc::clone(&mat_3),
     )));
@@ -190,7 +247,10 @@ mod tests {
     #[test]
     fn main() {
         // 960 540 / 426 240
-        let r = Renderer::new(1200, 800);
-        r.render(5);
+        let r = Renderer {
+            width: 1200,
+            height: 800,
+        };
+        r.render(500);
     }
 }
