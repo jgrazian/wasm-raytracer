@@ -1,3 +1,5 @@
+mod aabb;
+mod bvh;
 mod camera;
 mod common;
 mod hittable;
@@ -248,9 +250,9 @@ mod tests {
     fn main() {
         // 960 540 / 426 240
         let r = Renderer {
-            width: 1200,
-            height: 800,
+            width: 300,
+            height: 200,
         };
-        r.render(500);
+        r.render(10);
     }
 }

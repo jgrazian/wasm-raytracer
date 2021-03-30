@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use enum_dispatch::enum_dispatch;
 
+use crate::aabb::AABB;
+use crate::bvh::BVHNode;
 use crate::material::Material;
 use crate::ray::Ray;
 use crate::vec3::Vec3;
@@ -9,6 +11,7 @@ use crate::vec3::Vec3;
 #[enum_dispatch]
 pub trait Hittable {
     fn hit(&self, r: Ray, t_min: f64, t_max: f64) -> Option<HitRec>;
+    fn aabb(&self, t0: f64, t1: f64) -> Option<AABB>;
 }
 
 #[enum_dispatch(Hittable)]
@@ -48,6 +51,24 @@ impl Hittable for HittableList {
             }
         }
         rec
+    }
+
+    fn aabb(&self, t0: f64, t1: f64) -> Option<AABB> {
+        if self.objects.is_empty() {
+            return None;
+        }
+
+        let mut out: Option<AABB> = None;
+
+        for obj in &self.objects {
+            match (obj.aabb(t0, t1), out) {
+                (Some(aabb), None) => out = Some(aabb),
+                (Some(b0), Some(b1)) => out = Some(AABB::union(b0, b1)),
+                (None, _) => return None,
+            }
+        }
+
+        out
     }
 }
 
@@ -123,5 +144,12 @@ impl Hittable for Sphere {
         let mut rec = HitRec::new(p, n, t, Some(Arc::clone(&self.mat)));
         rec.set_face_normal(r, n);
         Some(rec)
+    }
+
+    fn aabb(&self, t0: f64, t1: f64) -> Option<AABB> {
+        Some(AABB {
+            min: self.c - Vec3::splat(self.r),
+            max: self.c + Vec3::splat(self.r),
+        })
     }
 }

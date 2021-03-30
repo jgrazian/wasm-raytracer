@@ -1,3 +1,5 @@
+use std::ops::Index;
+
 use auto_ops::{impl_op_ex, impl_op_ex_commutative};
 
 use crate::common::Rng;
@@ -116,6 +118,19 @@ impl Vec3 {
                 continue;
             }
             return p;
+        }
+    }
+}
+
+impl Index<usize> for Vec3 {
+    type Output = f64;
+    
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => panic!("Bad index")
         }
     }
 }
