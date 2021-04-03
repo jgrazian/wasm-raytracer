@@ -2,11 +2,8 @@ use std::sync::Arc;
 
 use enum_dispatch::enum_dispatch;
 
-use crate::aabb::AABB;
-use crate::bvh::BVHNode;
+use crate::geometry::{Ray, Vec3, AABB};
 use crate::material::Material;
-use crate::ray::Ray;
-use crate::vec3::Vec3;
 
 #[enum_dispatch]
 pub trait Hittable {
@@ -15,12 +12,12 @@ pub trait Hittable {
 }
 
 #[enum_dispatch(Hittable)]
-pub enum Object {
+pub enum Primative {
     Sphere,
 }
 
 pub struct HittableList {
-    objects: Vec<Object>,
+    objects: Vec<Primative>,
 }
 
 impl HittableList {
@@ -30,7 +27,7 @@ impl HittableList {
         }
     }
 
-    pub fn push(&mut self, obj: Object) {
+    pub fn push(&mut self, obj: Primative) {
         self.objects.push(obj);
     }
 }

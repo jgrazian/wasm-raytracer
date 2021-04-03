@@ -1,9 +1,8 @@
 use enum_dispatch::enum_dispatch;
 
 use crate::common::Rng;
+use crate::geometry::{Ray, Vec3};
 use crate::hittable::HitRec;
-use crate::ray::Ray;
-use crate::vec3::Vec3;
 
 #[enum_dispatch]
 pub trait MaterialTrait {

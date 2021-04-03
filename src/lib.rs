@@ -1,11 +1,8 @@
-mod aabb;
-mod bvh;
 mod camera;
 mod common;
+mod geometry;
 mod hittable;
 mod material;
-mod ray;
-mod vec3;
 
 use std::fs::File;
 use std::io::BufWriter;
@@ -17,10 +14,9 @@ use rayon::prelude::*;
 
 use camera::Camera;
 use common::{clamp, Rng};
-use hittable::{Hittable, HittableList, Object, Sphere};
+use geometry::{Ray, Vec3};
+use hittable::{Hittable, HittableList, Primative, Sphere};
 use material::{Dielectric, Lambertian, Material, MaterialTrait, Metal};
-use ray::Ray;
-use vec3::Vec3;
 
 /// Holds info about an image. Handles rendering.
 struct Renderer {
@@ -147,7 +143,7 @@ fn random_scene(rng: &mut Rng) -> HittableList {
         },
     }));
 
-    world.push(Object::from(Sphere::new(
+    world.push(Primative::from(Sphere::new(
         Vec3 {
             x: 0.0,
             y: -1000.0,
@@ -188,13 +184,13 @@ fn random_scene(rng: &mut Rng) -> HittableList {
                     mat = Arc::new(Material::from(Dielectric { ir: 1.5 }));
                 }
 
-                world.push(Object::from(Sphere::new(center, 0.2, Arc::clone(&mat))));
+                world.push(Primative::from(Sphere::new(center, 0.2, Arc::clone(&mat))));
             }
         }
     }
 
     let mat_1 = Arc::new(Material::from(Dielectric { ir: 1.5 }));
-    world.push(Object::from(Sphere::new(
+    world.push(Primative::from(Sphere::new(
         Vec3 {
             x: 0.0,
             y: 1.0,
@@ -211,7 +207,7 @@ fn random_scene(rng: &mut Rng) -> HittableList {
             z: 0.1,
         },
     }));
-    world.push(Object::from(Sphere::new(
+    world.push(Primative::from(Sphere::new(
         Vec3 {
             x: -4.0,
             y: 1.0,
@@ -229,7 +225,7 @@ fn random_scene(rng: &mut Rng) -> HittableList {
         },
         fuzz: 0.0,
     }));
-    world.push(Object::from(Sphere::new(
+    world.push(Primative::from(Sphere::new(
         Vec3 {
             x: 4.0,
             y: 1.0,
