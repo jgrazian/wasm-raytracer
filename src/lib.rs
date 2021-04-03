@@ -16,7 +16,7 @@ use camera::Camera;
 use common::{clamp, Rng};
 use geometry::{Ray, Vec3};
 use hittable::{Hittable, HittableList, Primative, Sphere};
-use material::{Dielectric, Lambertian, Material, MaterialTrait, Metal};
+use material::{Material, MaterialTrait};
 
 /// Holds info about an image. Handles rendering.
 struct Renderer {
@@ -101,11 +101,8 @@ impl Renderer {
         }
 
         match world.hit(r, 0.001, f64::INFINITY) {
-            Some(rec) => match &rec.mat {
-                Some(mat) => match mat.scatter(r, &rec, rng) {
-                    Some((r, c)) => c * Self::ray_color(r, world, rng, depth - 1),
-                    None => Vec3::zero(),
-                },
+            Some((rec, mat)) => match mat.scatter(r, &rec, rng) {
+                Some((r, c)) => c * Self::ray_color(r, world, rng, depth - 1),
                 None => Vec3::zero(),
             },
             None => {
@@ -135,23 +132,23 @@ impl Renderer {
 fn random_scene(rng: &mut Rng) -> HittableList {
     let mut world = HittableList::new();
 
-    let ground_mat = Arc::new(Material::from(Lambertian {
+    let ground_mat = Arc::new(Material::Lambertian {
         albedo: Vec3 {
             x: 0.5,
             y: 0.5,
             z: 0.5,
         },
-    }));
+    });
 
-    world.push(Primative::from(Sphere::new(
-        Vec3 {
+    world.push(Primative::Sphere {
+        c: Vec3 {
             x: 0.0,
             y: -1000.0,
             z: 0.0,
         },
-        1000.0,
-        Arc::clone(&ground_mat),
-    )));
+        r: 1000.0,
+        mat: Arc::clone(&ground_mat),
+    });
 
     for a in -11..11 {
         for b in -11..11 {
@@ -175,65 +172,69 @@ fn random_scene(rng: &mut Rng) -> HittableList {
 
                 if choose_mat < 0.8 {
                     let albedo = Vec3::random(rng) * Vec3::random(rng);
-                    mat = Arc::new(Material::from(Lambertian { albedo }));
+                    mat = Arc::new(Material::Lambertian { albedo });
                 } else if choose_mat < 0.95 {
                     let albedo = Vec3::random_range(rng, 0.5, 1.0);
                     let fuzz = rng.range(0.0, 0.5);
-                    mat = Arc::new(Material::from(Metal { albedo, fuzz }));
+                    mat = Arc::new(Material::Metal { albedo, fuzz });
                 } else {
-                    mat = Arc::new(Material::from(Dielectric { ir: 1.5 }));
+                    mat = Arc::new(Material::Dielectric { ir: 1.5 });
                 }
 
-                world.push(Primative::from(Sphere::new(center, 0.2, Arc::clone(&mat))));
+                world.push(Primative::Sphere {
+                    c: center,
+                    r: 0.2,
+                    mat: Arc::clone(&mat),
+                });
             }
         }
     }
 
-    let mat_1 = Arc::new(Material::from(Dielectric { ir: 1.5 }));
-    world.push(Primative::from(Sphere::new(
-        Vec3 {
+    let mat_1 = Arc::new(Material::Dielectric { ir: 1.5 });
+    world.push(Primative::Sphere {
+        c: Vec3 {
             x: 0.0,
             y: 1.0,
             z: 0.0,
         },
-        1.0,
-        Arc::clone(&mat_1),
-    )));
+        r: 1.0,
+        mat: Arc::clone(&mat_1),
+    });
 
-    let mat_2 = Arc::new(Material::from(Lambertian {
+    let mat_2 = Arc::new(Material::Lambertian {
         albedo: Vec3 {
             x: 0.4,
             y: 0.2,
             z: 0.1,
         },
-    }));
-    world.push(Primative::from(Sphere::new(
-        Vec3 {
+    });
+    world.push(Primative::Sphere {
+        c: Vec3 {
             x: -4.0,
             y: 1.0,
             z: 0.0,
         },
-        1.0,
-        Arc::clone(&mat_2),
-    )));
+        r: 1.0,
+        mat: Arc::clone(&mat_2),
+    });
 
-    let mat_3 = Arc::new(Material::from(Metal {
+    let mat_3 = Arc::new(Material::Metal {
         albedo: Vec3 {
             x: 0.7,
             y: 0.6,
             z: 0.5,
         },
         fuzz: 0.0,
-    }));
-    world.push(Primative::from(Sphere::new(
-        Vec3 {
+    });
+    world.push(Primative::Sphere {
+        c: Vec3 {
             x: 4.0,
             y: 1.0,
             z: 0.0,
         },
-        1.0,
-        Arc::clone(&mat_3),
-    )));
+        r: 1.0,
+        mat: Arc::clone(&mat_3),
+    });
 
     world
 }

@@ -1,19 +1,42 @@
 use std::sync::Arc;
 
-use enum_dispatch::enum_dispatch;
-
 use crate::geometry::{Ray, Vec3, AABB};
 use crate::material::Material;
 
-#[enum_dispatch]
+type MatRec = Option<(HitRec, Arc<Material>)>;
+
 pub trait Hittable {
-    fn hit(&self, r: Ray, t_min: f64, t_max: f64) -> Option<HitRec>;
+    fn hit(&self, r: Ray, t_min: f64, t_max: f64) -> MatRec;
     fn aabb(&self, t0: f64, t1: f64) -> Option<AABB>;
 }
 
-#[enum_dispatch(Hittable)]
 pub enum Primative {
-    Sphere,
+    Sphere { c: Vec3, r: f64, mat: Arc<Material> },
+}
+
+impl Hittable for Primative {
+    fn hit(&self, ray: Ray, t_min: f64, t_max: f64) -> MatRec {
+        match self {
+            Self::Sphere { c, r, mat } => {
+                Self::with_mat(Sphere { c: *c, r: *r }.hit(ray, t_min, t_max), mat)
+            }
+        }
+    }
+
+    fn aabb(&self, t0: f64, t1: f64) -> Option<AABB> {
+        match self {
+            Self::Sphere { c, r, .. } => Sphere { c: *c, r: *r }.aabb(t0, t1),
+        }
+    }
+}
+
+impl Primative {
+    fn with_mat(rec: Option<HitRec>, mat: &Arc<Material>) -> MatRec {
+        match rec {
+            Some(r) => Some((r, mat.clone())),
+            None => None,
+        }
+    }
 }
 
 pub struct HittableList {
@@ -34,14 +57,14 @@ impl HittableList {
 
 impl Hittable for HittableList {
     #[inline(always)]
-    fn hit(&self, r: Ray, t_min: f64, t_max: f64) -> Option<HitRec> {
-        let mut rec: Option<HitRec> = None;
+    fn hit(&self, r: Ray, t_min: f64, t_max: f64) -> MatRec {
+        let mut rec: MatRec = None;
         let mut closest_so_far = t_max;
 
         for obj in &self.objects {
             match obj.hit(r, t_min, closest_so_far) {
                 Some(h) => {
-                    closest_so_far = h.t;
+                    closest_so_far = h.0.t;
                     rec = Some(h);
                 }
                 None => {}
@@ -74,27 +97,24 @@ pub struct HitRec {
     pub p: Vec3,
     pub n: Vec3,
     pub t: f64,
-    pub mat: Option<Arc<Material>>,
     pub front_face: bool,
 }
 
 impl HitRec {
-    fn new(p: Vec3, n: Vec3, t: f64, mat: Option<Arc<Material>>) -> Self {
+    fn new(p: Vec3, t: f64, r: Ray, outward_normal: Vec3) -> Self {
+        // Determine if inside or outside shape. Needed for glass
+        let front_face = Vec3::dot(r.d, outward_normal) < 0.0;
+        let n = if front_face {
+            outward_normal
+        } else {
+            -outward_normal
+        };
+
         Self {
             p,
             n,
             t,
-            front_face: false,
-            mat,
-        }
-    }
-
-    fn set_face_normal(&mut self, r: Ray, outward_normal: Vec3) {
-        self.front_face = Vec3::dot(r.d, outward_normal) < 0.0;
-        if self.front_face {
-            self.n = outward_normal;
-        } else {
-            self.n = -outward_normal;
+            front_face,
         }
     }
 }
@@ -103,16 +123,9 @@ impl HitRec {
 pub struct Sphere {
     pub c: Vec3,
     pub r: f64,
-    pub mat: Arc<Material>,
 }
 
 impl Sphere {
-    pub fn new(c: Vec3, r: f64, mat: Arc<Material>) -> Self {
-        Self { c, r, mat }
-    }
-}
-
-impl Hittable for Sphere {
     #[inline(always)]
     fn hit(&self, r: Ray, t_min: f64, t_max: f64) -> Option<HitRec> {
         let oc = r.o - self.c;
@@ -138,8 +151,7 @@ impl Hittable for Sphere {
         let p = r.at(root);
         let n = (p - self.c) / self.r;
 
-        let mut rec = HitRec::new(p, n, t, Some(Arc::clone(&self.mat)));
-        rec.set_face_normal(r, n);
+        let mut rec = HitRec::new(p, t, r, n);
         Some(rec)
     }
 

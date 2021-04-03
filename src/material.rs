@@ -1,29 +1,37 @@
-use enum_dispatch::enum_dispatch;
-
 use crate::common::Rng;
 use crate::geometry::{Ray, Vec3};
 use crate::hittable::HitRec;
 
-#[enum_dispatch]
 pub trait MaterialTrait {
     fn scatter(&self, r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)>;
 }
 
-#[enum_dispatch(MaterialTrait)]
 #[derive(Clone, Debug)]
 pub enum Material {
-    Lambertian,
-    Metal,
-    Dielectric,
+    Lambertian { albedo: Vec3 },
+    Metal { albedo: Vec3, fuzz: f64 },
+    Dielectric { ir: f64 },
 }
 
-#[derive(Default, Debug, Clone)]
-pub struct Lambertian {
-    pub albedo: Vec3,
+impl MaterialTrait for Material {
+    fn scatter(&self, r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
+        match self {
+            Self::Lambertian { albedo } => Lambertian { albedo: *albedo }.scatter(r_in, rec, rng),
+            Self::Metal { albedo, fuzz } => Metal {
+                albedo: *albedo,
+                fuzz: *fuzz,
+            }
+            .scatter(r_in, rec, rng),
+            Self::Dielectric { ir } => Dielectric { ir: *ir }.scatter(r_in, rec, rng),
+        }
+    }
+}
+
+struct Lambertian {
+    albedo: Vec3,
 }
 
 impl MaterialTrait for Lambertian {
-    #[inline(always)]
     fn scatter(&self, _r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
         let mut scatter_dir = rec.n + Vec3::random_unit_sphere(rng);
 
@@ -41,14 +49,12 @@ impl MaterialTrait for Lambertian {
     }
 }
 
-#[derive(Default, Debug, Clone)]
-pub struct Metal {
-    pub albedo: Vec3,
-    pub fuzz: f64,
+struct Metal {
+    albedo: Vec3,
+    fuzz: f64,
 }
 
 impl MaterialTrait for Metal {
-    #[inline(always)]
     fn scatter(&self, r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
         let reflected = Vec3::reflect(r_in.d.unit(), rec.n);
 
@@ -65,22 +71,11 @@ impl MaterialTrait for Metal {
     }
 }
 
-#[derive(Default, Debug, Clone)]
-pub struct Dielectric {
-    pub ir: f64,
-}
-
-impl Dielectric {
-    #[inline(always)]
-    fn reflectance(cosine: f64, ref_idx: f64) -> f64 {
-        let mut r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
-        r0 = r0 * r0;
-        r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
-    }
+struct Dielectric {
+    ir: f64,
 }
 
 impl MaterialTrait for Dielectric {
-    #[inline(always)]
     fn scatter(&self, r_in: Ray, rec: &HitRec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
         let refraction_ratio = if rec.front_face {
             1.0 / self.ir
@@ -93,7 +88,7 @@ impl MaterialTrait for Dielectric {
         let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
 
         let cannot_refract = refraction_ratio * sin_theta > 1.0;
-        let angle_criteria = Self::reflectance(cos_theta, refraction_ratio) > rng.gen();
+        let angle_criteria = reflectance(cos_theta, refraction_ratio) > rng.gen();
         let dir = if cannot_refract || angle_criteria {
             Vec3::reflect(unit_dir, rec.n)
         } else {
@@ -102,4 +97,10 @@ impl MaterialTrait for Dielectric {
 
         Some((Ray { o: rec.p, d: dir }, Vec3::splat(1.0)))
     }
+}
+
+fn reflectance(cosine: f64, ref_idx: f64) -> f64 {
+    let mut r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
+    r0 = r0 * r0;
+    r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
 }
