@@ -1,5 +1,5 @@
 [package]
-name = "wasm-raytracer"
+name = "wasm_raytracer"
 version = "0.1.0"
 authors = ["Joey Graziano <joeyg11@vt.edu>"]
 edition = "2018"
