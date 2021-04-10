@@ -1,20 +1,29 @@
-use super::{Arc, HitRec, Hittable, Material, Ray, Sphere, AABB};
+use super::{Arc, HitRec, Hittable, Material, Ray, Sphere, AABB, BVH};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Primative {
     Sphere(Sphere, Arc<Material>),
+    Bvh(BVH),
 }
 
 impl Hittable for Primative {
     fn hit(&self, ray: Ray, t_min: f64, t_max: f64) -> HitRec {
         match self {
             Self::Sphere(s, mat) => s.hit(ray, t_min, t_max).mat(mat.clone()),
+            Self::Bvh(bvh) => bvh.hit(ray, t_min, t_max),
         }
     }
 
     fn aabb(&self, t0: f64, t1: f64) -> Option<AABB> {
         match self {
             Self::Sphere(s, _) => s.aabb(t0, t1),
+            Self::Bvh(bvh) => bvh.aabb(t0, t1),
         }
+    }
+}
+
+impl From<(Sphere, Arc<Material>)> for Primative {
+    fn from(sphere: (Sphere, Arc<Material>)) -> Self {
+        Primative::Sphere(sphere.0, sphere.1)
     }
 }

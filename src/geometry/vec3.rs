@@ -207,3 +207,268 @@ impl_op_ex!(-|a: Vec3| -> Vec3 {
         z: -a.z,
     }
 });
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn len() {
+        let a = Vec3 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        assert_eq!(a.len(), f64::sqrt(14.0));
+    }
+
+    #[test]
+    fn len_sq() {
+        let a = Vec3 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        assert_eq!(a.len_sq(), 14.0);
+    }
+
+    #[test]
+    fn unit() {
+        let a = Vec3 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        assert_eq!(
+            a.unit(),
+            Vec3 {
+                x: 1.0 / f64::sqrt(14.0),
+                y: 2.0 / f64::sqrt(14.0),
+                z: 3.0 / f64::sqrt(14.0)
+            }
+        );
+    }
+
+    #[test]
+    fn dot() {
+        let a = Vec3 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        let b = Vec3 {
+            x: 4.0,
+            y: 5.0,
+            z: 6.0,
+        };
+        assert_eq!(Vec3::dot(a, b), 32.0);
+    }
+
+    #[test]
+    fn cross() {
+        let a = Vec3 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        let b = Vec3 {
+            x: 4.0,
+            y: 5.0,
+            z: 6.0,
+        };
+        assert_eq!(
+            Vec3::cross(a, b),
+            Vec3 {
+                x: -3.0,
+                y: 6.0,
+                z: -3.0,
+            }
+        );
+    }
+
+    #[test]
+    fn reflect() {
+        let a = Vec3 {
+            x: 1.0,
+            y: -1.0,
+            z: 0.0,
+        };
+        let b = Vec3 {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        };
+        assert_eq!(
+            Vec3::reflect(a, b),
+            Vec3 {
+                x: 1.0,
+                y: 1.0,
+                z: 0.0,
+            }
+        );
+    }
+
+    #[test]
+    fn refract() {
+        let a = Vec3 {
+            x: 1.0,
+            y: -1.0,
+            z: 0.0,
+        };
+        let b = Vec3 {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        };
+        assert_eq!(
+            Vec3::refract(a, b, 0.9),
+            Vec3 {
+                x: 0.9,
+                y: -0.4358898943540673,
+                z: 0.0,
+            }
+        );
+    }
+
+    #[test]
+    fn add() {
+        let a = Vec3 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        let b = Vec3 {
+            x: 4.0,
+            y: 5.0,
+            z: 6.0,
+        };
+        assert_eq!(
+            a + b,
+            Vec3 {
+                x: 5.0,
+                y: 7.0,
+                z: 9.0
+            }
+        );
+        assert_eq!(
+            a + 1.0,
+            Vec3 {
+                x: 2.0,
+                y: 3.0,
+                z: 4.0
+            }
+        );
+    }
+
+    #[test]
+    fn sub() {
+        let a = Vec3 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        let b = Vec3 {
+            x: 4.0,
+            y: 5.0,
+            z: 6.0,
+        };
+        assert_eq!(
+            a - b,
+            Vec3 {
+                x: -3.0,
+                y: -3.0,
+                z: -3.0
+            }
+        );
+        assert_eq!(
+            a - 1.0,
+            Vec3 {
+                x: 0.0,
+                y: 1.0,
+                z: 2.0
+            }
+        );
+    }
+
+    #[test]
+    fn mul() {
+        let a = Vec3 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        let b = Vec3 {
+            x: 4.0,
+            y: 5.0,
+            z: 6.0,
+        };
+        assert_eq!(
+            a * b,
+            Vec3 {
+                x: 4.0,
+                y: 10.0,
+                z: 18.0
+            }
+        );
+        assert_eq!(
+            a * 2.0,
+            Vec3 {
+                x: 2.0,
+                y: 4.0,
+                z: 6.0
+            }
+        );
+    }
+
+    #[test]
+    fn div() {
+        let a = Vec3 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        let b = Vec3 {
+            x: 4.0,
+            y: 5.0,
+            z: 6.0,
+        };
+        assert_eq!(
+            a / b,
+            Vec3 {
+                x: 0.25,
+                y: 0.4,
+                z: 0.5
+            }
+        );
+        assert_eq!(
+            a / 2.0,
+            Vec3 {
+                x: 0.5,
+                y: 1.0,
+                z: 1.5
+            }
+        );
+    }
+
+    #[test]
+    fn neg() {
+        let a = Vec3 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        let b = Vec3 {
+            x: 4.0,
+            y: 5.0,
+            z: 6.0,
+        };
+        assert_eq!(
+            -a,
+            Vec3 {
+                x: -1.0,
+                y: -2.0,
+                z: -3.0
+            }
+        );
+    }
+}

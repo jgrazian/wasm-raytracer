@@ -23,6 +23,22 @@ impl MaterialTrait for Material {
     }
 }
 
+impl From<Lambertian> for Material {
+    fn from(mat: Lambertian) -> Self {
+        Self::Lambertian(mat)
+    }
+}
+impl From<Metal> for Material {
+    fn from(mat: Metal) -> Self {
+        Self::Metal(mat)
+    }
+}
+impl From<Dielectric> for Material {
+    fn from(mat: Dielectric) -> Self {
+        Self::Dielectric(mat)
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Lambertian {
     pub albedo: Vec3,

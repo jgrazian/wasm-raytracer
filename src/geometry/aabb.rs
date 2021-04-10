@@ -50,3 +50,49 @@ impl AABB {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hit() {
+        let aabb = AABB {
+            min: Vec3::splat(0.0),
+            max: Vec3::splat(1.0),
+        };
+        let ray = Ray {
+            o: Vec3 {
+                x: -1.0,
+                y: 0.5,
+                z: 0.5,
+            },
+            d: Vec3 {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        };
+        assert_eq!(aabb.hit(ray, 0.0, 10.0), true);
+        assert_eq!(aabb.hit(ray, 5.0, 10.0), false);
+    }
+
+    #[test]
+    fn union() {
+        let aabb1 = AABB {
+            min: Vec3::splat(0.0),
+            max: Vec3::splat(1.0),
+        };
+        let aabb2 = AABB {
+            min: Vec3::splat(1.0),
+            max: Vec3::splat(2.0),
+        };
+        assert_eq!(
+            AABB::union(aabb1, aabb2),
+            AABB {
+                min: Vec3::splat(0.0),
+                max: Vec3::splat(2.0),
+            }
+        );
+    }
+}

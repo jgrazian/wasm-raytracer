@@ -12,3 +12,17 @@ impl Ray {
         self.o + t * self.d
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn at() {
+        let r = Ray {
+            o: Vec3::splat(0.0),
+            d: Vec3::splat(1.0),
+        };
+        assert_eq!(r.at(2.0), Vec3::splat(2.0))
+    }
+}

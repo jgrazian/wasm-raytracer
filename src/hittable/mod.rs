@@ -1,3 +1,4 @@
+mod bvh;
 mod primative;
 mod sphere;
 
@@ -6,6 +7,7 @@ use std::sync::Arc;
 use crate::geometry::{Ray, Vec3, AABB};
 use crate::material::Material;
 
+pub use bvh::BVH;
 pub use primative::Primative;
 pub use sphere::Sphere;
 
