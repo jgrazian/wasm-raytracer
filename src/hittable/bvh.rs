@@ -1,8 +1,8 @@
-use super::{HitRec, Hittable, Primative, Ray, AABB};
+use super::{HitRec, Hittable, Ray, AABB};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default)]
 pub struct BVH {
-    objects: Vec<Primative>,
+    objects: Vec<Box<dyn Hittable>>,
 }
 
 impl BVH {}

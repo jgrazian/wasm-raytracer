@@ -1,5 +1,4 @@
-use super::Ray;
-use super::Vec3;
+use super::{Ray, Vec3};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct AABB {
@@ -31,7 +30,7 @@ impl AABB {
         true
     }
 
-    pub fn union(a: Self, b: Self) -> Self {
+    pub fn grow(a: Self, b: Self) -> Self {
         let small = Vec3 {
             x: a.min.x.min(b.min.x),
             y: a.min.y.min(b.min.y),
@@ -78,7 +77,7 @@ mod tests {
     }
 
     #[test]
-    fn union() {
+    fn grow() {
         let aabb1 = AABB {
             min: Vec3::splat(0.0),
             max: Vec3::splat(1.0),
@@ -88,7 +87,7 @@ mod tests {
             max: Vec3::splat(2.0),
         };
         assert_eq!(
-            AABB::union(aabb1, aabb2),
+            AABB::grow(aabb1, aabb2),
             AABB {
                 min: Vec3::splat(0.0),
                 max: Vec3::splat(2.0),

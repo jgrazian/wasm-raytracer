@@ -1,9 +1,11 @@
 use super::{HitRec, Hittable, Ray, Vec3, AABB};
+use crate::material::Material;
 
-#[derive(Clone, Debug, Default, Copy)]
+#[derive(Debug, Default)]
 pub struct Sphere {
     pub c: Vec3,
     pub r: f64,
+    pub mat: Option<Box<dyn Material>>,
 }
 
 impl Hittable for Sphere {
@@ -31,8 +33,11 @@ impl Hittable for Sphere {
         let t = root;
         let p = r.at(root);
         let n = (p - self.c) / self.r;
-
-        HitRec::hit(p, t, r, n)
+        if let Some(ref mat) = self.mat {
+            HitRec::hit(p, t, r, n, Some(mat))
+        } else {
+            HitRec::hit(p, t, r, n, None)
+        }
     }
 
     fn aabb(&self, _t0: f64, _t1: f64) -> Option<AABB> {
@@ -40,5 +45,53 @@ impl Hittable for Sphere {
             min: self.c - Vec3::splat(self.r),
             max: self.c + Vec3::splat(self.r),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hit() {
+        let s = Sphere {
+            c: Vec3::zero(),
+            r: 1.0,
+            mat: None,
+        };
+        let r1 = Ray {
+            o: Vec3::splat(2.0),
+            d: Vec3::splat(1.0),
+        };
+        let r2 = Ray {
+            o: Vec3::splat(-2.0),
+            d: Vec3::splat(1.0),
+        };
+
+        assert!(match s.hit(r1, 0.0, 10.0) {
+            HitRec::Miss => true,
+            _ => false,
+        });
+        assert!(match s.hit(r2, 0.0, 10.0) {
+            HitRec::Hit(_, _) => true,
+            _ => false,
+        });
+    }
+
+    #[test]
+    fn aabb() {
+        let s = Sphere {
+            c: Vec3::zero(),
+            r: 1.0,
+            mat: None,
+        };
+
+        assert_eq!(
+            s.aabb(0.0, 0.0),
+            Some(AABB {
+                min: Vec3::splat(-1.0),
+                max: Vec3::splat(1.0)
+            })
+        );
     }
 }

@@ -1,24 +1,24 @@
+mod aabb;
 mod bvh;
-mod primative;
 mod sphere;
 
-use std::sync::Arc;
+use std::fmt::Debug;
 
-use crate::geometry::{Ray, Vec3, AABB};
+use crate::geometry::{Ray, Vec3};
 use crate::material::Material;
 
+pub use aabb::AABB;
 pub use bvh::BVH;
-pub use primative::Primative;
 pub use sphere::Sphere;
 
-pub trait Hittable {
+pub trait Hittable: Debug + Send + Sync {
     fn hit(&self, r: Ray, t_min: f64, t_max: f64) -> HitRec;
     fn aabb(&self, t0: f64, t1: f64) -> Option<AABB>;
 }
 
-#[derive(Debug, Default)]
+#[derive(Default, Debug)]
 pub struct HittableList {
-    objects: Vec<Primative>,
+    objects: Vec<Box<dyn Hittable>>,
 }
 
 impl HittableList {
@@ -28,7 +28,7 @@ impl HittableList {
         }
     }
 
-    pub fn push(&mut self, obj: Primative) {
+    pub fn push(&mut self, obj: Box<dyn Hittable>) {
         self.objects.push(obj);
     }
 }
@@ -61,7 +61,7 @@ impl Hittable for HittableList {
         for obj in &self.objects {
             match (obj.aabb(t0, t1), out) {
                 (Some(aabb), None) => out = Some(aabb),
-                (Some(b0), Some(b1)) => out = Some(AABB::union(b0, b1)),
+                (Some(b0), Some(b1)) => out = Some(AABB::grow(b0, b1)),
                 (None, _) => return None,
             }
         }
@@ -70,8 +70,9 @@ impl Hittable for HittableList {
     }
 }
 
-pub enum HitRec {
-    Hit(Rec, Option<Arc<Material>>),
+#[derive(Debug, Clone, Copy)]
+pub enum HitRec<'mat> {
+    Hit(Rec, Option<&'mat Box<dyn Material>>),
     Miss,
 }
 
@@ -83,8 +84,14 @@ pub struct Rec {
     pub front_face: bool,
 }
 
-impl HitRec {
-    fn hit(p: Vec3, t: f64, r: Ray, outward_normal: Vec3) -> Self {
+impl<'mat> HitRec<'mat> {
+    fn hit(
+        p: Vec3,
+        t: f64,
+        r: Ray,
+        outward_normal: Vec3,
+        mat: Option<&'mat Box<dyn Material>>,
+    ) -> Self {
         // Determine if inside or outside shape. Needed for glass
         let front_face = Vec3::dot(r.d, outward_normal) < 0.0;
         let n = if front_face {
@@ -100,14 +107,7 @@ impl HitRec {
                 t,
                 front_face,
             },
-            None,
+            mat,
         )
-    }
-
-    fn mat(&self, material: Arc<Material>) -> Self {
-        match self {
-            Self::Hit(rec, _) => Self::Hit(*rec, Some(material)),
-            _ => Self::Miss,
-        }
     }
 }

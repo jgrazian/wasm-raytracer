@@ -15,7 +15,6 @@ use rayon::prelude::*;
 use common::{clamp, Rng};
 use geometry::{Ray, Vec3};
 use hittable::{HitRec, Hittable, HittableList};
-use material::*;
 pub use scene::*;
 
 /// Holds info about an image. Handles rendering.

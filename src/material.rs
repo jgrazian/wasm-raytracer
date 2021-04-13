@@ -1,50 +1,19 @@
+use std::fmt::Debug;
+
 use crate::common::Rng;
 use crate::geometry::{Ray, Vec3};
 use crate::hittable::Rec;
 
-pub trait MaterialTrait {
+pub trait Material: Debug + Send + Sync {
     fn scatter(&self, r_in: Ray, rec: &Rec, rng: &mut Rng) -> Option<(Ray, Vec3)>;
 }
 
-#[derive(Clone, Debug)]
-pub enum Material {
-    Lambertian(Lambertian),
-    Metal(Metal),
-    Dielectric(Dielectric),
-}
-
-impl MaterialTrait for Material {
-    fn scatter(&self, r_in: Ray, rec: &Rec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
-        match self {
-            Self::Lambertian(mat) => mat.scatter(r_in, rec, rng),
-            Self::Metal(mat) => mat.scatter(r_in, rec, rng),
-            Self::Dielectric(mat) => mat.scatter(r_in, rec, rng),
-        }
-    }
-}
-
-impl From<Lambertian> for Material {
-    fn from(mat: Lambertian) -> Self {
-        Self::Lambertian(mat)
-    }
-}
-impl From<Metal> for Material {
-    fn from(mat: Metal) -> Self {
-        Self::Metal(mat)
-    }
-}
-impl From<Dielectric> for Material {
-    fn from(mat: Dielectric) -> Self {
-        Self::Dielectric(mat)
-    }
-}
-
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Lambertian {
     pub albedo: Vec3,
 }
 
-impl MaterialTrait for Lambertian {
+impl Material for Lambertian {
     fn scatter(&self, _r_in: Ray, rec: &Rec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
         let mut scatter_dir = rec.n + Vec3::random_unit_sphere(rng);
 
@@ -68,7 +37,7 @@ pub struct Metal {
     pub fuzz: f64,
 }
 
-impl MaterialTrait for Metal {
+impl Material for Metal {
     fn scatter(&self, r_in: Ray, rec: &Rec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
         let reflected = Vec3::reflect(r_in.d.unit(), rec.n);
 
@@ -90,7 +59,7 @@ pub struct Dielectric {
     pub ir: f64,
 }
 
-impl MaterialTrait for Dielectric {
+impl Material for Dielectric {
     fn scatter(&self, r_in: Ray, rec: &Rec, rng: &mut Rng) -> Option<(Ray, Vec3)> {
         let refraction_ratio = if rec.front_face {
             1.0 / self.ir
