@@ -26,10 +26,10 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(width: usize, height: usize) -> Self {
+    pub fn new(width: usize) -> Self {
         Self {
             width,
-            height,
+            height: width,
             scene: Scene::default(),
             image: None,
         }
@@ -111,7 +111,9 @@ impl Renderer {
 
     pub fn scene<T: SceneTrait>(&mut self, scene_gen: T) {
         let mut rng = Rng::new(1234);
-        self.scene = scene_gen.scene(&mut rng);
+        let (height, scene) = scene_gen.scene(self.width, &mut rng);
+        self.height = height;
+        self.scene = scene;
     }
 
     pub fn write_image(&self, path: &Path) {

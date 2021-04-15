@@ -80,6 +80,12 @@ impl Vec3 {
         const ETA: f64 = 1e-8;
         (self.x.abs() < ETA) && (self.y.abs() < ETA) && (self.z.abs() < ETA)
     }
+
+    pub fn rotate_axis_angle(&self, axis: Self, angle: f64) -> Self {
+        self * angle.cos()
+            + Self::cross(axis, *self) * angle.sin()
+            + axis * Self::dot(axis, *self) * (1.0 - angle.cos())
+    }
 }
 
 impl Vec3 {

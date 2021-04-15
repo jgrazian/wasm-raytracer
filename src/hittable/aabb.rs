@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use super::{Ray, Vec3};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -16,7 +18,7 @@ impl AABB {
             let mut t0 = (self.min[a] - r.o[a]) * inv_d;
             let mut t1 = (self.max[a] - r.o[a]) * inv_d;
 
-            if inv_d < 1.0 {
+            if inv_d < 0.0 {
                 std::mem::swap(&mut t0, &mut t1);
             }
 
@@ -48,6 +50,14 @@ impl AABB {
             max: big,
         }
     }
+
+    pub fn compare(a: Self, b: Self, axis: usize) -> Ordering {
+        if a.min[axis] < b.min[axis] {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        }
+    }
 }
 
 #[cfg(test)]
@@ -72,8 +82,47 @@ mod tests {
                 z: 0.0,
             },
         };
+        let ray2 = Ray {
+            o: Vec3 {
+                x: 0.5,
+                y: 0.5,
+                z: 0.5,
+            },
+            d: Vec3 {
+                x: 0.1,
+                y: 0.1,
+                z: 0.1,
+            },
+        };
         assert_eq!(aabb.hit(ray, 0.0, 10.0), true);
         assert_eq!(aabb.hit(ray, 5.0, 10.0), false);
+        assert_eq!(aabb.hit(ray2, 0.0, 10.0), true);
+
+        let ray3 = Ray {
+            o: Vec3 {
+                x: -5.0,
+                y: 1.0,
+                z: 0.0,
+            },
+            d: Vec3 {
+                x: 4.5,
+                y: -5.6,
+                z: 7.5,
+            },
+        };
+        let aabb2 = AABB {
+            min: Vec3 {
+                x: -1000.0,
+                y: -2000.0,
+                z: -1000.0,
+            },
+            max: Vec3 {
+                x: 1000.0,
+                y: 1.0,
+                z: 1000.0,
+            },
+        };
+        assert_eq!(aabb2.hit(ray3, 0.001, f64::INFINITY), true);
     }
 
     #[test]
@@ -93,5 +142,20 @@ mod tests {
                 max: Vec3::splat(2.0),
             }
         );
+    }
+
+    #[test]
+    fn compare() {
+        let box1 = AABB {
+            min: Vec3::splat(0.0),
+            max: Vec3::splat(1.0),
+        };
+        let box2 = AABB {
+            min: Vec3::splat(3.0),
+            max: Vec3::splat(5.0),
+        };
+        assert_eq!(AABB::compare(box2, box1, 0), Ordering::Greater);
+        assert_eq!(AABB::compare(box1, box2, 1), Ordering::Less);
+        assert_eq!(AABB::compare(box1, box2, 2), Ordering::Less);
     }
 }

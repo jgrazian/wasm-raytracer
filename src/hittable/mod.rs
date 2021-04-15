@@ -18,7 +18,7 @@ pub trait Hittable: Debug + Send + Sync {
 
 #[derive(Default, Debug)]
 pub struct HittableList {
-    objects: Vec<Box<dyn Hittable>>,
+    pub objects: Vec<Box<dyn Hittable>>,
 }
 
 impl HittableList {

@@ -34,4 +34,9 @@ impl Rng {
     pub fn range(&mut self, min: f64, max: f64) -> f64 {
         min + (max - min) * self.gen()
     }
+
+    #[inline(always)]
+    pub fn int(&mut self, min: i64, max: i64) -> i64 {
+        self.range(min as f64, (max + 1) as f64) as i64
+    }
 }
