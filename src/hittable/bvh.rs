@@ -1,9 +1,8 @@
 use std::cmp::Ordering;
 
 use super::{HitRec, Hittable, Ray, AABB};
-use crate::common::Rng;
+use crate::rng::Rng;
 
-#[derive(Debug)]
 pub struct BVH {
     bounds: AABB,
     left: Option<Box<dyn Hittable>>,

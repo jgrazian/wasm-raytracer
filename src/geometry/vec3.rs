@@ -2,7 +2,7 @@ use std::ops::Index;
 
 use auto_ops::{impl_op_ex, impl_op_ex_commutative};
 
-use crate::common::Rng;
+use crate::rng::Rng;
 
 #[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub struct Vec3 {

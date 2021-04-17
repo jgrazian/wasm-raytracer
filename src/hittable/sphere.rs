@@ -1,11 +1,22 @@
+use std::f64::consts::PI;
+
 use super::{HitRec, Hittable, Ray, Vec3, AABB};
 use crate::material::Material;
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Sphere {
     pub c: Vec3,
     pub r: f64,
     pub mat: Option<Box<dyn Material>>,
+}
+
+impl Sphere {
+    fn uv(p: Vec3) -> (f64, f64) {
+        let theta = -p.y.acos();
+        let phi = -p.z.atan2(p.x) + PI;
+
+        (phi / (2.0 * PI), theta / PI)
+    }
 }
 
 impl Hittable for Sphere {
@@ -33,10 +44,11 @@ impl Hittable for Sphere {
         let t = root;
         let p = r.at(root);
         let n = (p - self.c) / self.r;
+        let (u, v) = Self::uv(n);
         if let Some(ref mat) = self.mat {
-            HitRec::hit(p, t, r, n, Some(mat))
+            HitRec::hit(p, t, u, v, r, n, Some(mat))
         } else {
-            HitRec::hit(p, t, r, n, None)
+            HitRec::hit(p, t, u, v, r, n, None)
         }
     }
 

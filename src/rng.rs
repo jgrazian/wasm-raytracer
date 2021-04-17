@@ -1,14 +1,3 @@
-#[inline]
-pub fn clamp(v: f64, min: f64, max: f64) -> f64 {
-    if v < min {
-        return min;
-    }
-    if v > max {
-        return max;
-    }
-    v
-}
-
 pub struct Rng {
     seed: u32,
 }

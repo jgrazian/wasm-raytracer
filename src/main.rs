@@ -1,12 +1,13 @@
 #![feature(test)]
 
 use std::path::Path;
-use wasm_raytracer::{RandomScene, Renderer, SimpleScene};
+
+use wasm_raytracer::*;
 
 fn main() {
     let mut r = Renderer::new(800);
-    r.scene(RandomScene {});
-    r.render(500);
+    r.scene(PerlinSpheres {});
+    r.render(100);
     r.write_image(Path::new(r"out.png"));
 }
 

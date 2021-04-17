@@ -1,9 +1,11 @@
 mod camera;
-mod common;
 mod geometry;
 mod hittable;
 mod material;
+mod perlin;
+mod rng;
 mod scene;
+mod texture;
 
 use std::fs::File;
 use std::io::BufWriter;
@@ -12,9 +14,9 @@ use std::path::Path;
 use indicatif::{ParallelProgressIterator, ProgressBar};
 use rayon::prelude::*;
 
-use common::{clamp, Rng};
 use geometry::{Ray, Vec3};
 use hittable::{HitRec, Hittable, HittableList};
+use rng::Rng;
 pub use scene::*;
 
 /// Holds info about an image. Handles rendering.
@@ -84,7 +86,7 @@ impl Renderer {
                     Some((r, c)) => c * Self::ray_color(r, world, rng, depth - 1),
                     None => Vec3::zero(),
                 },
-                None => rec.n, // No material found, default to color by normal
+                None => rec.p, //rec.n, // No material found, default to color by normal
             },
             HitRec::Miss => {
                 let t = 0.5 * (r.d.unit().y + 1.0);
@@ -104,9 +106,9 @@ impl Renderer {
         let g = (v.y * scale).sqrt();
         let b = (v.z * scale).sqrt();
 
-        buf.push((256.0 * clamp(r, 0.0, 0.9999)) as u8);
-        buf.push((256.0 * clamp(g, 0.0, 0.9999)) as u8);
-        buf.push((256.0 * clamp(b, 0.0, 0.9999)) as u8);
+        buf.push((256.0 * r.clamp(0.0, 0.9999)) as u8);
+        buf.push((256.0 * g.clamp(0.0, 0.9999)) as u8);
+        buf.push((256.0 * b.clamp(0.0, 0.9999)) as u8);
     }
 
     pub fn scene<T: SceneTrait>(&mut self, scene_gen: T) {

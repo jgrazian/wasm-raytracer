@@ -1,16 +1,24 @@
 use std::fmt::Debug;
 
-use crate::common::Rng;
 use crate::geometry::{Ray, Vec3};
 use crate::hittable::Rec;
+use crate::rng::Rng;
+use crate::texture::{SolidColor, Texture};
 
-pub trait Material: Debug + Send + Sync {
+pub trait Material: Sync + Send {
     fn scatter(&self, r_in: Ray, rec: &Rec, rng: &mut Rng) -> Option<(Ray, Vec3)>;
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Lambertian {
-    pub albedo: Vec3,
+    pub albedo: Box<dyn Texture>,
+}
+
+impl From<Vec3> for Lambertian {
+    fn from(color: Vec3) -> Self {
+        Self {
+            albedo: Box::new(SolidColor { color_value: color }),
+        }
+    }
 }
 
 impl Material for Lambertian {
@@ -26,7 +34,7 @@ impl Material for Lambertian {
                 o: rec.p,
                 d: scatter_dir,
             },
-            self.albedo,
+            self.albedo.value(rec.u, rec.v, rec.p),
         ))
     }
 }

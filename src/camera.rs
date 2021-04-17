@@ -1,5 +1,5 @@
-use crate::common::Rng;
 use crate::geometry::{Ray, Vec3};
+use crate::rng::Rng;
 
 #[derive(Debug)]
 pub struct Camera {
