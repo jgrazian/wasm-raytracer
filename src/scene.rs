@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::camera::Camera;
 use crate::geometry::Vec3;
 use crate::hittable::{Hittable, HittableList, Sphere, BVH};
@@ -51,11 +53,11 @@ impl SceneTrait for RandomScene {
                 },
             }),
         };
-        let ground_mat = Box::new(Lambertian {
-            albedo: Box::new(ground_texture) as Box<dyn Texture>,
+        let ground_mat = Arc::new(Lambertian {
+            albedo: Arc::new(ground_texture) as Arc<dyn Texture>,
         });
 
-        world.push(Box::new(Sphere {
+        world.push(Sphere {
             c: Vec3 {
                 x: 0.0,
                 y: -1000.0,
@@ -63,7 +65,7 @@ impl SceneTrait for RandomScene {
             },
             r: 1000.0,
             mat: Some(ground_mat),
-        }));
+        });
 
         for a in -11..11 {
             for b in -11..11 {
@@ -83,30 +85,28 @@ impl SceneTrait for RandomScene {
                 .len()
                     > 0.9
                 {
-                    let mat: Box<dyn Material>;
-
-                    if choose_mat < 0.8 {
+                    let mat: Arc<dyn Material> = if choose_mat < 0.8 {
                         let albedo = Vec3::random(rng) * Vec3::random(rng);
-                        mat = Box::new(Lambertian::from(albedo));
+                        Arc::new(Lambertian::from(albedo))
                     } else if choose_mat < 0.95 {
                         let albedo = Vec3::random_range(rng, 0.5, 1.0);
                         let fuzz = rng.range(0.0, 0.5);
-                        mat = Box::new(Metal { albedo, fuzz });
+                        Arc::new(Metal { albedo, fuzz })
                     } else {
-                        mat = Box::new(Dielectric { ir: 1.5 });
-                    }
+                        Arc::new(Dielectric { ir: 1.5 })
+                    };
 
-                    world.push(Box::new(Sphere {
+                    world.push(Sphere {
                         c: center,
                         r: 0.2,
                         mat: Some(mat),
-                    }));
+                    });
                 }
             }
         }
 
-        let mat_1 = Box::new(Dielectric { ir: 1.5 });
-        world.push(Box::new(Sphere {
+        let mat_1 = Arc::new(Dielectric { ir: 1.5 });
+        world.push(Sphere {
             c: Vec3 {
                 x: 0.0,
                 y: 1.0,
@@ -114,14 +114,14 @@ impl SceneTrait for RandomScene {
             },
             r: 1.0,
             mat: Some(mat_1),
-        }));
+        });
 
-        let mat_2 = Box::new(Lambertian::from(Vec3 {
+        let mat_2 = Arc::new(Lambertian::from(Vec3 {
             x: 0.4,
             y: 0.2,
             z: 0.1,
         }));
-        world.push(Box::new(Sphere {
+        world.push(Sphere {
             c: Vec3 {
                 x: -4.0,
                 y: 1.0,
@@ -129,9 +129,9 @@ impl SceneTrait for RandomScene {
             },
             r: 1.0,
             mat: Some(mat_2),
-        }));
+        });
 
-        let mat_3 = Box::new(Metal {
+        let mat_3 = Arc::new(Metal {
             albedo: Vec3 {
                 x: 0.7,
                 y: 0.6,
@@ -139,7 +139,7 @@ impl SceneTrait for RandomScene {
             },
             fuzz: 0.0,
         });
-        world.push(Box::new(Sphere {
+        world.push(Sphere {
             c: Vec3 {
                 x: 4.0,
                 y: 1.0,
@@ -147,10 +147,9 @@ impl SceneTrait for RandomScene {
             },
             r: 1.0,
             mat: Some(mat_3),
-        }));
+        });
 
-        let bvh = BVH::build(&mut world.objects, 0.0, 0.0, rng);
-        world.push(Box::new(bvh));
+        world.into_bvh(rng);
 
         ((width as f64 / ar) as usize, Scene { world, camera })
     }
@@ -182,12 +181,12 @@ impl SceneTrait for SimpleScene {
             (look_from - look_at).len(),
         );
 
-        let ground_mat = Box::new(Lambertian::from(Vec3 {
+        let ground_mat = Arc::new(Lambertian::from(Vec3 {
             x: 0.5,
             y: 0.5,
             z: 0.5,
         }));
-        world.push(Box::new(Sphere {
+        world.push(Sphere {
             c: Vec3 {
                 x: 0.0,
                 y: -1000.0,
@@ -195,14 +194,14 @@ impl SceneTrait for SimpleScene {
             },
             r: 1000.0,
             mat: Some(ground_mat),
-        }));
+        });
 
-        let sphere_mat = Box::new(Lambertian::from(Vec3 {
+        let sphere_mat = Arc::new(Lambertian::from(Vec3 {
             x: 0.0,
             y: 0.0,
             z: 0.8,
         }));
-        world.push(Box::new(Sphere {
+        world.push(Sphere {
             c: Vec3 {
                 x: 0.0,
                 y: 0.5,
@@ -210,10 +209,9 @@ impl SceneTrait for SimpleScene {
             },
             r: 0.5,
             mat: Some(sphere_mat),
-        }));
+        });
 
-        let bvh = BVH::build(&mut world.objects, 0.0, 0.0, rng);
-        world.push(Box::new(bvh));
+        world.into_bvh(rng);
 
         ((width as f64 / ar) as usize, Scene { world, camera })
     }
@@ -223,7 +221,7 @@ pub struct Sphereflake {}
 
 impl SceneTrait for Sphereflake {
     fn scene(&self, width: usize, rng: &mut Rng) -> (usize, Scene) {
-        let mut objects: Vec<Box<dyn Hittable>> = vec![];
+        let mut world = HittableList::new();
 
         let ar = 16.0 / 9.0;
         let look_from = Vec3 {
@@ -245,12 +243,12 @@ impl SceneTrait for Sphereflake {
             (look_from - look_at).len(),
         );
 
-        let ground_mat = Box::new(Lambertian::from(Vec3 {
+        let ground_mat = Arc::new(Lambertian::from(Vec3 {
             x: 0.5,
             y: 0.5,
             z: 0.5,
         }));
-        objects.push(Box::new(Sphere {
+        world.push(Sphere {
             c: Vec3 {
                 x: 0.0,
                 y: -1000.0,
@@ -258,7 +256,7 @@ impl SceneTrait for Sphereflake {
             },
             r: 1000.0,
             mat: Some(ground_mat),
-        }));
+        });
 
         let pos = Vec3 {
             x: 0.0,
@@ -270,11 +268,9 @@ impl SceneTrait for Sphereflake {
             y: 1.0,
             z: 0.0,
         };
-        objects.extend(Self::make(pos, axis, 1.0, 0));
+        world.objects.extend(Self::make(pos, axis, 1.0, 0));
 
-        let bvh = BVH::build(&mut objects, 0.0, 0.0, rng);
-        let mut world = HittableList::new();
-        world.push(Box::new(bvh));
+        world.into_bvh(rng);
 
         ((width as f64 / ar) as usize, Scene { world, camera })
     }
@@ -284,7 +280,7 @@ impl Sphereflake {
     fn make(pos: Vec3, axis: Vec3, r: f64, depth: usize) -> Vec<Box<dyn Hittable>> {
         const MAX_DEPTH: usize = 4;
 
-        let sphere_mat = Box::new(Metal {
+        let sphere_mat = Arc::new(Metal {
             albedo: Vec3 {
                 x: 0.7,
                 y: 0.7,
@@ -377,38 +373,33 @@ impl SceneTrait for PerlinSpheres {
             (look_from - look_at).len(),
         );
 
-        let ground_mat = Box::new(Lambertian {
-            albedo: Box::new(NoiseTexture {
+        let mat = Arc::new(Lambertian {
+            albedo: Arc::new(NoiseTexture {
                 noise: Perlin::new(),
+                scale: 4.0,
             }),
         });
-        world.push(Box::new(Sphere {
+        world.push(Sphere {
             c: Vec3 {
                 x: 0.0,
                 y: -1000.0,
                 z: 0.0,
             },
             r: 1000.0,
-            mat: Some(ground_mat),
-        }));
-
-        let sphere_mat = Box::new(Lambertian {
-            albedo: Box::new(NoiseTexture {
-                noise: Perlin::new(),
-            }),
+            mat: Some(mat.clone()),
         });
-        world.push(Box::new(Sphere {
+
+        world.push(Sphere {
             c: Vec3 {
                 x: 0.0,
                 y: 2.0,
                 z: 0.0,
             },
             r: 2.0,
-            mat: Some(sphere_mat),
-        }));
+            mat: Some(mat.clone()),
+        });
 
-        let bvh = BVH::build(&mut world.objects, 0.0, 0.0, rng);
-        world.push(Box::new(bvh));
+        world.into_bvh(rng);
 
         ((width as f64 / ar) as usize, Scene { world, camera })
     }
@@ -418,7 +409,7 @@ pub struct CheckeredSpheres {}
 
 impl SceneTrait for CheckeredSpheres {
     fn scene(&self, width: usize, rng: &mut Rng) -> (usize, Scene) {
-        let mut objects: Vec<Box<dyn Hittable>> = vec![];
+        let mut world = HittableList::new();
 
         let ar = 16.0 / 9.0;
         let look_from = Vec3 {
@@ -433,7 +424,7 @@ impl SceneTrait for CheckeredSpheres {
         };
         let camera = Camera::new(look_from, look_at, 20.0, ar, 0.1, 10.0);
 
-        let checker1 = CheckerTexture {
+        let checker_text = CheckerTexture {
             odd: Box::new(SolidColor {
                 color_value: Vec3 {
                     x: 0.2,
@@ -450,52 +441,30 @@ impl SceneTrait for CheckeredSpheres {
             }),
         };
 
-        let checker2 = CheckerTexture {
-            odd: Box::new(SolidColor {
-                color_value: Vec3 {
-                    x: 0.2,
-                    y: 0.3,
-                    z: 0.1,
-                },
-            }),
-            even: Box::new(SolidColor {
-                color_value: Vec3 {
-                    x: 0.9,
-                    y: 0.9,
-                    z: 0.9,
-                },
-            }),
-        };
-
-        let ground_mat = Box::new(Lambertian {
-            albedo: Box::new(checker1),
+        let mat = Arc::new(Lambertian {
+            albedo: Arc::new(checker_text),
         });
-        objects.push(Box::new(Sphere {
+        world.push(Sphere {
             c: Vec3 {
                 x: 0.0,
                 y: -10.0,
                 z: 0.0,
             },
             r: 10.0,
-            mat: Some(ground_mat),
-        }));
-
-        let sphere_mat = Box::new(Lambertian {
-            albedo: Box::new(checker2),
+            mat: Some(mat.clone()),
         });
-        objects.push(Box::new(Sphere {
+
+        world.push(Sphere {
             c: Vec3 {
                 x: 0.0,
                 y: 10.0,
                 z: 0.0,
             },
             r: 10.0,
-            mat: Some(sphere_mat),
-        }));
+            mat: Some(mat.clone()),
+        });
 
-        let bvh = BVH::build(&mut objects, 0.0, 0.0, rng);
-        let mut world = HittableList::new();
-        world.push(Box::new(bvh));
+        world.into_bvh(rng);
 
         ((width as f64 / ar) as usize, Scene { world, camera })
     }

@@ -1,9 +1,11 @@
+use std::sync::Arc;
+
 use crate::geometry::{Ray, Vec3};
 use crate::material::Material;
 
 #[derive(Clone, Copy)]
 pub enum HitRec<'mat> {
-    Hit(Rec, Option<&'mat Box<dyn Material>>),
+    Hit(Rec, Option<&'mat Arc<dyn Material>>),
     Miss,
 }
 
@@ -25,7 +27,7 @@ impl<'mat> HitRec<'mat> {
         v: f64,
         r: Ray,
         outward_normal: Vec3,
-        mat: Option<&'mat Box<dyn Material>>,
+        mat: Option<&'mat Arc<dyn Material>>,
     ) -> Self {
         // Determine if inside or outside shape. Needed for glass
         let front_face = Vec3::dot(r.d, outward_normal) < 0.0;

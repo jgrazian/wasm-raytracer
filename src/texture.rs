@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use crate::geometry::Vec3;
 use crate::perlin::Perlin;
 
-pub trait Texture: Send + Sync {
+pub trait Texture: Send + Sync + Debug {
     fn value(&self, u: f64, v: f64, p: Vec3) -> Vec3;
 }
 
@@ -18,6 +18,7 @@ impl Texture for SolidColor {
     }
 }
 
+#[derive(Debug)]
 pub struct CheckerTexture {
     pub odd: Box<dyn Texture>,
     pub even: Box<dyn Texture>,
@@ -34,12 +35,16 @@ impl Texture for CheckerTexture {
     }
 }
 
+#[derive(Debug)]
 pub struct NoiseTexture {
     pub noise: Perlin,
+    pub scale: f64,
 }
 
 impl Texture for NoiseTexture {
     fn value(&self, _u: f64, _v: f64, p: Vec3) -> Vec3 {
-        Vec3::splat(1.0) * self.noise.noise(p)
+        // Vec3::splat(1.0) * 0.5 * (1.0 + self.noise.noise(self.scale * p))
+        // Vec3::splat(1.0) * self.noise.turb(self.scale * p)
+        Vec3::splat(1.0) * 0.5 * (1.0 + (self.scale * p.z + 10.0 * self.noise.turb(p, 7)).sin())
     }
 }

@@ -6,18 +6,19 @@ mod sphere;
 use std::fmt::Debug;
 
 use crate::geometry::{Ray, Vec3};
+use crate::rng::Rng;
 
 pub use aabb::AABB;
 pub use bvh::BVH;
 pub use hitrec::{HitRec, Rec};
 pub use sphere::Sphere;
 
-pub trait Hittable: Send + Sync {
+pub trait Hittable: Send + Sync + Debug {
     fn hit(&self, r: Ray, t_min: f64, t_max: f64) -> HitRec;
     fn aabb(&self, t0: f64, t1: f64) -> Option<AABB>;
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct HittableList {
     pub objects: Vec<Box<dyn Hittable>>,
 }
@@ -29,8 +30,13 @@ impl HittableList {
         }
     }
 
-    pub fn push(&mut self, obj: Box<dyn Hittable>) {
-        self.objects.push(obj);
+    pub fn push<T: Hittable + 'static>(&mut self, obj: T) {
+        self.objects.push(Box::new(obj));
+    }
+
+    pub fn into_bvh(&mut self, rng: &mut Rng) {
+        let bvh = BVH::build(&mut self.objects, 0.0, 0.0, rng);
+        self.push(bvh);
     }
 }
 

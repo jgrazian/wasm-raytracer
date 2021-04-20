@@ -1,13 +1,14 @@
 use std::f64::consts::PI;
+use std::sync::Arc;
 
 use super::{HitRec, Hittable, Ray, Vec3, AABB};
 use crate::material::Material;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Sphere {
     pub c: Vec3,
     pub r: f64,
-    pub mat: Option<Box<dyn Material>>,
+    pub mat: Option<Arc<dyn Material>>,
 }
 
 impl Sphere {

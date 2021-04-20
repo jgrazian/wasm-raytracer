@@ -1,22 +1,25 @@
+use std::clone::Clone;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use crate::geometry::{Ray, Vec3};
 use crate::hittable::Rec;
 use crate::rng::Rng;
 use crate::texture::{SolidColor, Texture};
 
-pub trait Material: Sync + Send {
+pub trait Material: Sync + Send + Debug {
     fn scatter(&self, r_in: Ray, rec: &Rec, rng: &mut Rng) -> Option<(Ray, Vec3)>;
 }
 
+#[derive(Debug, Clone)]
 pub struct Lambertian {
-    pub albedo: Box<dyn Texture>,
+    pub albedo: Arc<dyn Texture>,
 }
 
 impl From<Vec3> for Lambertian {
     fn from(color: Vec3) -> Self {
         Self {
-            albedo: Box::new(SolidColor { color_value: color }),
+            albedo: Arc::new(SolidColor { color_value: color }),
         }
     }
 }
