@@ -6,7 +6,7 @@ use wasm_raytracer::*;
 
 fn main() {
     let mut r = Renderer::new(800);
-    r.scene(PerlinSpheres {});
+    r.scene(LightSpheres {});
     r.render(100);
     r.write_image(Path::new(r"out.png"));
 }

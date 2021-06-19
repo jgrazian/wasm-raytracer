@@ -9,6 +9,9 @@ use crate::texture::{SolidColor, Texture};
 
 pub trait Material: Sync + Send + Debug {
     fn scatter(&self, r_in: Ray, rec: &Rec, rng: &mut Rng) -> Option<(Ray, Vec3)>;
+    fn emitted(&self, _u: f64, _v: f64, _p: Vec3) -> Vec3 {
+        Vec3::zero()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -98,4 +101,19 @@ fn reflectance(cosine: f64, ref_idx: f64) -> f64 {
     let mut r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
     r0 = r0 * r0;
     r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
+}
+
+#[derive(Clone, Debug)]
+pub struct DiffuseLight {
+    pub emit: Arc<dyn Texture>,
+}
+
+impl Material for DiffuseLight {
+    fn scatter(&self, _r_in: Ray, _rec: &Rec, _rng: &mut Rng) -> Option<(Ray, Vec3)> {
+        None
+    }
+
+    fn emitted(&self, u: f64, v: f64, p: Vec3) -> Vec3 {
+        self.emit.value(u, v, p)
+    }
 }

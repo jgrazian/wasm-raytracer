@@ -118,7 +118,7 @@ mod tests {
             })
             .collect();
 
-        let bvh = BVH::build(&mut objects, 0.0, 0.0, &mut rng);
+        let _bvh = BVH::build(&mut objects, 0.0, 0.0, &mut rng);
     }
 
     #[test]

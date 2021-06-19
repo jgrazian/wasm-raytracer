@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::camera::Camera;
 use crate::geometry::Vec3;
-use crate::hittable::{Hittable, HittableList, Sphere, BVH};
+use crate::hittable::{Hittable, HittableList, Sphere};
 use crate::material::*;
 use crate::perlin::Perlin;
 use crate::rng::Rng;
@@ -16,6 +16,7 @@ pub trait SceneTrait {
 pub struct Scene {
     pub world: HittableList,
     pub camera: Camera,
+    pub background: Vec3,
 }
 
 pub struct RandomScene {}
@@ -23,6 +24,11 @@ pub struct RandomScene {}
 impl SceneTrait for RandomScene {
     fn scene(&self, width: usize, rng: &mut Rng) -> (usize, Scene) {
         let mut world = HittableList::new();
+        let background = Vec3 {
+            x: 0.70,
+            y: 0.80,
+            z: 1.00,
+        };
 
         let ar = 1.5;
         let look_from = Vec3 {
@@ -151,7 +157,14 @@ impl SceneTrait for RandomScene {
 
         world.into_bvh(rng);
 
-        ((width as f64 / ar) as usize, Scene { world, camera })
+        (
+            (width as f64 / ar) as usize,
+            Scene {
+                world,
+                camera,
+                background,
+            },
+        )
     }
 }
 
@@ -160,6 +173,11 @@ pub struct SimpleScene {}
 impl SceneTrait for SimpleScene {
     fn scene(&self, width: usize, rng: &mut Rng) -> (usize, Scene) {
         let mut world = HittableList::new();
+        let background = Vec3 {
+            x: 0.70,
+            y: 0.80,
+            z: 1.00,
+        };
 
         let ar = 16.0 / 9.0;
         let look_from = Vec3 {
@@ -213,7 +231,14 @@ impl SceneTrait for SimpleScene {
 
         world.into_bvh(rng);
 
-        ((width as f64 / ar) as usize, Scene { world, camera })
+        (
+            (width as f64 / ar) as usize,
+            Scene {
+                world,
+                camera,
+                background,
+            },
+        )
     }
 }
 
@@ -222,6 +247,11 @@ pub struct Sphereflake {}
 impl SceneTrait for Sphereflake {
     fn scene(&self, width: usize, rng: &mut Rng) -> (usize, Scene) {
         let mut world = HittableList::new();
+        let background = Vec3 {
+            x: 0.70,
+            y: 0.80,
+            z: 1.00,
+        };
 
         let ar = 16.0 / 9.0;
         let look_from = Vec3 {
@@ -272,7 +302,14 @@ impl SceneTrait for Sphereflake {
 
         world.into_bvh(rng);
 
-        ((width as f64 / ar) as usize, Scene { world, camera })
+        (
+            (width as f64 / ar) as usize,
+            Scene {
+                world,
+                camera,
+                background,
+            },
+        )
     }
 }
 
@@ -352,6 +389,11 @@ pub struct PerlinSpheres {}
 impl SceneTrait for PerlinSpheres {
     fn scene(&self, width: usize, rng: &mut Rng) -> (usize, Scene) {
         let mut world = HittableList::new();
+        let background = Vec3 {
+            x: 0.70,
+            y: 0.80,
+            z: 1.00,
+        };
 
         let ar = 16.0 / 9.0;
         let look_from = Vec3 {
@@ -401,7 +443,14 @@ impl SceneTrait for PerlinSpheres {
 
         world.into_bvh(rng);
 
-        ((width as f64 / ar) as usize, Scene { world, camera })
+        (
+            (width as f64 / ar) as usize,
+            Scene {
+                world,
+                camera,
+                background,
+            },
+        )
     }
 }
 
@@ -410,6 +459,11 @@ pub struct CheckeredSpheres {}
 impl SceneTrait for CheckeredSpheres {
     fn scene(&self, width: usize, rng: &mut Rng) -> (usize, Scene) {
         let mut world = HittableList::new();
+        let background = Vec3 {
+            x: 0.70,
+            y: 0.80,
+            z: 1.00,
+        };
 
         let ar = 16.0 / 9.0;
         let look_from = Vec3 {
@@ -466,6 +520,88 @@ impl SceneTrait for CheckeredSpheres {
 
         world.into_bvh(rng);
 
-        ((width as f64 / ar) as usize, Scene { world, camera })
+        (
+            (width as f64 / ar) as usize,
+            Scene {
+                world,
+                camera,
+                background,
+            },
+        )
+    }
+}
+
+pub struct LightSpheres {}
+
+impl SceneTrait for LightSpheres {
+    fn scene(&self, width: usize, rng: &mut Rng) -> (usize, Scene) {
+        let mut world = HittableList::new();
+        let background = Vec3 {
+            x: 0.00,
+            y: 0.00,
+            z: 0.00,
+        };
+
+        let ar = 16.0 / 9.0;
+        let look_from = Vec3 {
+            x: 13.0,
+            y: 2.0,
+            z: 3.0,
+        };
+        let look_at = Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        let camera = Camera::new(
+            look_from,
+            look_at,
+            20.0,
+            ar,
+            0.01,
+            (look_from - look_at).len(),
+        );
+
+        let mat_ground = Arc::new(Lambertian {
+            albedo: Arc::new(NoiseTexture {
+                noise: Perlin::new(),
+                scale: 4.0,
+            }),
+        });
+        let mat_light = Arc::new(DiffuseLight {
+            emit: Arc::new(SolidColor {
+                color_value: Vec3::splat(2.0),
+            }),
+        });
+
+        world.push(Sphere {
+            c: Vec3 {
+                x: 0.0,
+                y: -1000.0,
+                z: 0.0,
+            },
+            r: 1000.0,
+            mat: Some(mat_ground),
+        });
+        world.push(Sphere {
+            c: Vec3 {
+                x: 0.0,
+                y: 2.0,
+                z: 0.0,
+            },
+            r: 2.0,
+            mat: Some(mat_light),
+        });
+
+        world.into_bvh(rng);
+
+        (
+            (width as f64 / ar) as usize,
+            Scene {
+                world,
+                camera,
+                background,
+            },
+        )
     }
 }

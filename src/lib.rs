@@ -63,7 +63,13 @@ impl Renderer {
                         let v = (j as f64 + rng.gen()) / ((self.height - 1) as f64);
 
                         let r = self.scene.camera.get_ray(u, v, &mut rng);
-                        pixel_color += Self::ray_color(r, &self.scene.world, &mut rng, max_depth);
+                        pixel_color += Self::ray_color(
+                            r,
+                            &self.scene.background,
+                            &self.scene.world,
+                            &mut rng,
+                            max_depth,
+                        );
                     }
                     Self::write_color(&mut row_buf, pixel_color, n_samples);
                 }
@@ -75,28 +81,32 @@ impl Renderer {
         self.image = Some(img_buf);
     }
 
-    fn ray_color(r: Ray, world: &HittableList, rng: &mut Rng, depth: usize) -> Vec3 {
+    fn ray_color(
+        r: Ray,
+        background: &Vec3,
+        world: &HittableList,
+        rng: &mut Rng,
+        depth: usize,
+    ) -> Vec3 {
         if depth <= 0 {
             return Vec3::zero();
         }
 
         match world.hit(r, 0.001, f64::INFINITY) {
             HitRec::Hit(rec, mat) => match mat {
-                Some(mat) => match mat.scatter(r, &rec, rng) {
-                    Some((r, c)) => c * Self::ray_color(r, world, rng, depth - 1),
-                    None => Vec3::zero(),
-                },
-                None => rec.p, //rec.n, // No material found, default to color by normal
+                Some(mat) => {
+                    let emitted = mat.emitted(rec.u, rec.v, rec.p);
+
+                    return match mat.scatter(r, &rec, rng) {
+                        Some((r, c)) => {
+                            emitted + c * Self::ray_color(r, background, world, rng, depth - 1)
+                        }
+                        None => emitted,
+                    };
+                }
+                None => rec.n, // No material found, default to color by normal
             },
-            HitRec::Miss => {
-                let t = 0.5 * (r.d.unit().y + 1.0);
-                (1.0 - t) * Vec3::splat(1.0)
-                    + t * Vec3 {
-                        x: 0.5,
-                        y: 0.7,
-                        z: 1.0,
-                    }
-            }
+            HitRec::Miss => *background,
         }
     }
 
